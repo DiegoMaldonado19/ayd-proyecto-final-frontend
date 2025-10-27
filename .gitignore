@@ -40,3 +40,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Project documentation (local only)
+RESUMEN_EJECUTIVO.md
+PLAN_DE_TRABAJO.md
+VERIFICACION_REQUISITOS.md
+COMPONENTES_COMPLETADOS.md
