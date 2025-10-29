@@ -71,11 +71,11 @@ jobs:
             echo 'VERSION=latest' > .env &&
 
             # Deploy frontend
-            docker-compose pull &&
-            docker-compose up -d &&
+            docker compose pull &&
+            docker compose up -d &&
 
             sleep 15 &&
-            docker-compose ps &&
+            docker compose ps &&
             echo 'Frontend deployed and running on port 4200'
           "
           echo "Frontend deployment completed"
