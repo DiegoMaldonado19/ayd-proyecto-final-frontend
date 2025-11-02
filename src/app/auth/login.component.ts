@@ -13,13 +13,22 @@ import { NotificationService } from '../shared/services/notification.service';
   selector: 'app-login',
   imports: [CommonModule, FormsModule, InputComponent, ButtonComponent, CardComponent],
   template: `
-    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div
+      class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4"
+    >
       <div class="w-full max-w-md">
         <!-- Logo y título -->
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+          <div
+            class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-2xl mb-4 shadow-lg"
+          >
             <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+              />
             </svg>
           </div>
           <h1 class="text-3xl font-bold text-gray-900 mb-2">Park Control S.A.</h1>
@@ -30,7 +39,7 @@ import { NotificationService } from '../shared/services/notification.service';
         <app-card>
           <div class="p-6">
             <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Iniciar Sesión</h2>
-            
+
             <form (ngSubmit)="onSubmit()" class="space-y-5">
               <!-- Email -->
               <app-input
@@ -81,15 +90,21 @@ import { NotificationService } from '../shared/services/notification.service';
               <div class="text-center space-y-2">
                 <p class="text-sm text-gray-600">
                   <span class="inline-flex items-center">
-                    <svg class="w-4 h-4 mr-1.5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    <svg
+                      class="w-4 h-4 mr-1.5 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"
+                      />
                     </svg>
                     Conexión segura SSL
                   </span>
                 </p>
-                <p class="text-xs text-gray-500">
-                  Versión 1.0.0 • © 2025 Park Control S.A.
-                </p>
+                <p class="text-xs text-gray-500">Versión 1.0.0 • © 2025 Park Control S.A.</p>
               </div>
             </div>
           </div>
@@ -98,8 +113,11 @@ import { NotificationService } from '../shared/services/notification.service';
         <!-- Información de ayuda -->
         <div class="mt-6 text-center">
           <p class="text-sm text-gray-600">
-            ¿Problemas para acceder? Contacta a 
-            <a href="mailto:soporte@parkcontrol.com" class="text-blue-600 hover:text-blue-700 font-medium">
+            ¿Problemas para acceder? Contacta a
+            <a
+              href="mailto:soporte@parkcontrol.com"
+              class="text-blue-600 hover:text-blue-700 font-medium"
+            >
               soporte@parkcontrol.com
             </a>
           </p>
@@ -107,11 +125,13 @@ import { NotificationService } from '../shared/services/notification.service';
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class LoginComponent {
   email = '';
@@ -127,9 +147,9 @@ export class LoginComponent {
   ) {}
 
   isFormValid(): boolean {
-    return this.email.trim().length > 0 && 
-           this.password.trim().length >= 8 &&
-           this.email.includes('@');
+    return (
+      this.email.trim().length > 0 && this.password.trim().length >= 8 && this.email.includes('@')
+    );
   }
 
   validateFields(): boolean {
@@ -164,7 +184,7 @@ export class LoginComponent {
     }
 
     this.loading.set(true);
-    
+
     try {
       const response: LoginResponse = await this.auth.login(this.email, this.password);
 
@@ -172,7 +192,7 @@ export class LoginComponent {
       if (response.requires_2fa_verification) {
         this.notification.info('Se requiere verificación 2FA');
         this.router.navigate(['/auth/verify-2fa'], {
-          state: { tempToken: response.access_token }
+          state: { tempToken: response.access_token },
         });
         return;
       }
@@ -186,13 +206,12 @@ export class LoginComponent {
 
       // Caso 3: Login exitoso completo
       this.notification.success(`¡Bienvenido ${response.full_name}!`);
-      
+
       // Redirigir según rol
       this.redirectByRole(response.role);
-
     } catch (error: any) {
       console.error('Error en login:', error);
-      
+
       // Manejar errores específicos
       if (error.status === 401) {
         this.notification.error('Credenciales incorrectas');
@@ -211,22 +230,36 @@ export class LoginComponent {
 
   redirectByRole(role: string) {
     // Redirigir según el rol del usuario
+    /*
+      case 1 -> "ADMIN";
+      case 2 -> "BRANCH_OPERATOR";
+      case 3 -> "BACK_OFFICE";
+      case 4 -> "CLIENT";
+      case 5 -> "COMPANY";
+      case 6 -> "COMMERCE";
+      default -> "UNKNOWN";
+    */
     switch (role) {
       case 'ADMIN':
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/admin/dashboard']);
         break;
-      case 'OP_BRANCH':
-      case 'OP_BACKOFFICE':
-        this.router.navigate(['/tickets']);
+      case 'BRANCH_OPERATOR':
+        this.router.navigate(['/branches/dashboard']);
         break;
-      case 'FLEET_ADMIN':
-        this.router.navigate(['/commerce']);
+      case 'BACK_OFFICE':
+        this.router.navigate(['/backoffice/dashboard']);
         break;
-      case 'SUBSCRIBER':
-        this.router.navigate(['/subscriptions/my-subscription']);
+      case 'CLIENT':
+        this.router.navigate(['/client/dashboard']);
+        break;
+      case 'COMPANY':
+        this.router.navigate(['/company/dashboard']);
+        break;
+      case 'COMMERCE':
+        this.router.navigate(['/commerce/dashboard']);
         break;
       default:
-        this.router.navigate(['/dashboard']);
+        this.router.navigate(['/']);
     }
   }
 
@@ -234,4 +267,3 @@ export class LoginComponent {
     this.router.navigate(['/auth/reset-password']);
   }
 }
-

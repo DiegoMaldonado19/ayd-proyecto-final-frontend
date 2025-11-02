@@ -24,16 +24,8 @@ export const routes: Routes = [
 				loadComponent: () => import('./tickets/tickets.component').then(m => m.TicketsComponent)
 			},
 			{
-				path: 'branches',
-				loadComponent: () => import('./branches/branches.component').then(m => m.BranchesComponent)
-			},
-			{
 				path: 'subscriptions',
 				loadComponent: () => import('./subscriptions/subscriptions.component').then(m => m.SubscriptionsComponent)
-			},
-			{
-				path: 'commerce',
-				loadComponent: () => import('./commerce/commerce.component').then(m => m.CommerceComponent)
 			},
 			{
 				path: 'reports',
@@ -41,8 +33,34 @@ export const routes: Routes = [
 			},
 			{
 				path: 'admin',
-				loadComponent: () => import('./admin/admin.component').then(m => m.AdminComponent)
-			}
+				loadComponent: () => import('./admin/admin.layout').then(m => m.AdminLayout),
+        loadChildren: () => import('./admin/admin.routes').then(m => m.ADMIN_ROUTES)
+			},
+      {
+        path: 'branches',
+        loadComponent: () => import('./branches/branches.layout').then(m => m.BranchesLayout),
+        loadChildren: () => import('./branches/branches.routes').then(m => m.BRANCHES_ROUTES)
+      },
+      {
+        path: 'backoffice',
+        loadComponent: () => import('./backoffice/backoffice.layout').then(m => m.BackOfficeLayout),
+        loadChildren: () => import('./backoffice/backoffice.routes').then(m => m.BACKOFFICE_ROUTES)
+      },
+      {
+        path: 'client',
+        loadComponent: () => import('./client/client.layout').then(m => m.ClientLayout),
+        loadChildren: () => import('./client/client.routes').then(m => m.CLIENT_ROUTES)
+      },
+      {
+        path: 'company',
+        loadComponent: () => import('./company/company.layout').then(m => m.CompanyLayout),
+        loadChildren: () => import('./company/company.routes').then(m => m.COMPANY_ROUTES)
+      },
+      {
+        path: 'commerce',
+        loadComponent: () => import('./commerce/commerce.layout').then(m => m.CommerceLayout),
+        loadChildren: () => import('./commerce/commerce.routes').then(m => m.COMMERCE_ROUTES)
+      }
 		]
 	},
 	{ path: '**', redirectTo: 'dashboard' }
