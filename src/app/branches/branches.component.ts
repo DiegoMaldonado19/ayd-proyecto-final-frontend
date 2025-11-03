@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 
 @Component({
   standalone: true,
-  selector: 'app-branches',
+  selector: 'app-branches-dashboard',
   template: `
     <div style="padding:20px;">
       <h1>Sucursales</h1>
@@ -10,4 +10,4 @@ import { Component } from '@angular/core';
     </div>
   `
 })
-export class BranchesComponent {}
+export class BranchesDashboardComponent {}

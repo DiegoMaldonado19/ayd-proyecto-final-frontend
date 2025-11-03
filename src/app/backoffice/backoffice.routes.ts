@@ -1,0 +1,9 @@
+import { Routes } from '@angular/router';
+
+export const BACKOFFICE_ROUTES: Routes = [
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./backoffice.component').then((m) => m.BackofficeDashboardComponent),
+  },
+];

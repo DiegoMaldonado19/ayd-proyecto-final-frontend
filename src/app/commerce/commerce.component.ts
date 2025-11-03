@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 
 @Component({
   standalone: true,
-  selector: 'app-commerce',
+  selector: 'app-commerce-dashboard',
   template: `
     <div style="padding:20px;">
       <h1>Comercios afiliados</h1>
@@ -10,4 +10,4 @@ import { Component } from '@angular/core';
     </div>
   `
 })
-export class CommerceComponent {}
+export class CommerceDashboardComponent {}

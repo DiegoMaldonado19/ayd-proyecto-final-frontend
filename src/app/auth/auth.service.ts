@@ -1,6 +1,6 @@
 import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { API_BASE } from '../api.config';
 import { firstValueFrom } from 'rxjs';
 
@@ -93,9 +93,12 @@ export class AuthService {
   constructor() {
     // Cargar usuario al iniciar si hay token
     if (this.isBrowser && this.getToken()) {
-      this.loadProfile().catch(() => {
-        // Si falla cargar perfil, limpiar todo
-        this.clearAuth();
+      this.loadProfile().catch((error) => {
+        if (error instanceof HttpErrorResponse && [401, 403].includes(error.status)) {
+          this.clearAuth();
+          return;
+        }
+        console.error('Error al recuperar la sesión', error);
       });
     }
   }
