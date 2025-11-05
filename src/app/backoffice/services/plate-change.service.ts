@@ -86,4 +86,20 @@ export class PlateChangeService {
       map(response => response.data)
     );
   }
+
+  /**
+   * Agregar evidencia a una solicitud de cambio de placa
+   * POST /plate-changes/{id}/evidence?document_type_id={documentTypeId}
+   */
+  addEvidence(id: number, file: File, documentTypeId: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.http.post<ApiResponse<any>>(
+      `${this.baseUrl}/${id}/evidence?document_type_id=${documentTypeId}`,
+      formData
+    ).pipe(
+      map(response => response.data)
+    );
+  }
 }

@@ -1,13 +1,21 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlateChangeService } from './services/plate-change.service';
 import { PlateChange } from './models/plate-change.interface';
 
+interface DocumentType {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+}
+
 @Component({
   standalone: true,
   selector: 'app-plate-change-detail',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-gray-50 p-6">
       <!-- Header with back button -->
@@ -126,9 +134,86 @@ import { PlateChange } from './models/plate-change.interface';
 
         <!-- Evidencias -->
         <div class="rounded-lg bg-white border border-gray-200 p-6 shadow-sm">
-          <h2 class="text-gray-600 text-xs font-semibold uppercase mb-4">
-            Evidencias ({{ plateChange()!.evidence_count }})
-          </h2>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-gray-600 text-xs font-semibold uppercase">
+              Evidencias ({{ plateChange()!.evidence_count }})
+            </h2>
+            <button
+              *ngIf="plateChange()!.status_code === 'PENDING'"
+              (click)="toggleUploadForm()"
+              class="inline-flex items-center rounded-md bg-yellow-400 text-gray-900 px-3 py-1.5 text-sm font-medium hover:bg-yellow-500 transition">
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Agregar Evidencia
+            </button>
+          </div>
+
+          <!-- Formulario de subida -->
+          <div *ngIf="showUploadForm()" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Subir Nueva Evidencia</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento</label>
+                <select 
+                  [(ngModel)]="selectedDocumentType"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
+                  <option [value]="null">Seleccionar tipo...</option>
+                  <option *ngFor="let docType of documentTypes" [value]="docType.id">
+                    {{ docType.name }} - {{ docType.description }}
+                  </option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
+                <input 
+                  type="file"
+                  (change)="onFileSelected($event)"
+                  accept="image/*,.pdf"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-sm">
+                <p class="mt-1 text-xs text-gray-500">Formatos aceptados: imágenes y PDF. Tamaño máximo: 5MB</p>
+              </div>
+              <div *ngIf="selectedFile()" class="p-3 bg-white border border-gray-200 rounded-md">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="text-sm text-gray-900 font-medium">{{ selectedFile()!.name }}</span>
+                    <span class="text-xs text-gray-500">({{ formatFileSize(selectedFile()!.size) }})</span>
+                  </div>
+                  <button
+                    (click)="clearFile()"
+                    class="text-red-600 hover:text-red-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  (click)="uploadEvidence()"
+                  [disabled]="!canUpload() || uploading()"
+                  class="flex-1 inline-flex items-center justify-center rounded-md bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none transition">
+                  <svg *ngIf="!uploading()" class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  <svg *ngIf="uploading()" class="animate-spin h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {{ uploading() ? 'Subiendo...' : 'Subir Archivo' }}
+                </button>
+                <button
+                  (click)="toggleUploadForm()"
+                  [disabled]="uploading()"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 disabled:opacity-50">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
           
           <div *ngIf="plateChange()!.evidences && plateChange()!.evidences.length > 0" class="space-y-3">
             <div *ngFor="let evidence of plateChange()!.evidences" 
@@ -283,6 +368,21 @@ export class PlateChangeDetailPage implements OnInit {
   processing = signal<boolean>(false);
   error = signal<string | null>(null);
   successMessage = signal<string | null>(null);
+  showUploadForm = signal<boolean>(false);
+  uploading = signal<boolean>(false);
+  selectedFile = signal<File | null>(null);
+  selectedDocumentType = signal<number | null>(null);
+
+  // Tipos de documentos según la base de datos
+  documentTypes: DocumentType[] = [
+    { id: 1, code: 'IDENTIFICATION', name: 'Identificación Personal', description: 'DPI, Pasaporte, Licencia' },
+    { id: 2, code: 'VEHICLE_CARD', name: 'Tarjeta de Circulación', description: 'Documento del vehículo' },
+    { id: 3, code: 'POLICE_REPORT', name: 'Denuncia Policial', description: 'Reporte oficial de robo' },
+    { id: 4, code: 'TRANSFER_DOCUMENT', name: 'Documento de Traspaso', description: 'Compra-venta de vehículo' },
+    { id: 5, code: 'INSURANCE_REPORT', name: 'Reporte de Seguro', description: 'Documento de siniestro' },
+    { id: 6, code: 'VEHICLE_PHOTO', name: 'Foto de Vehículo', description: 'Fotografía de placa o vehículo' },
+    { id: 7, code: 'OTHER', name: 'Otro Documento', description: 'Documentación adicional' }
+  ];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -383,6 +483,64 @@ export class PlateChangeDetailPage implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/backoffice/plate-changes']);
+  }
+
+  toggleUploadForm(): void {
+    this.showUploadForm.set(!this.showUploadForm());
+    if (!this.showUploadForm()) {
+      this.clearFile();
+      this.selectedDocumentType.set(null);
+    }
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      
+      // Validar tamaño (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('El archivo es demasiado grande. Tamaño máximo: 5MB');
+        input.value = '';
+        return;
+      }
+      
+      this.selectedFile.set(file);
+    }
+  }
+
+  clearFile(): void {
+    this.selectedFile.set(null);
+  }
+
+  canUpload(): boolean {
+    return this.selectedFile() !== null && this.selectedDocumentType() !== null;
+  }
+
+  async uploadEvidence(): Promise<void> {
+    if (!this.canUpload()) return;
+
+    this.uploading.set(true);
+    try {
+      await this.plateChangeService.addEvidence(
+        this.plateChange()!.id,
+        this.selectedFile()!,
+        this.selectedDocumentType()!
+      ).toPromise();
+
+      this.showSuccess('Evidencia agregada exitosamente');
+      this.clearFile();
+      this.selectedDocumentType.set(null);
+      this.showUploadForm.set(false);
+      
+      // Recargar detalles para mostrar la nueva evidencia
+      await this.loadPlateChange(this.plateChange()!.id);
+    } catch (err: any) {
+      alert(err?.error?.message || 'Error al subir la evidencia');
+      console.error('Error uploading evidence:', err);
+    } finally {
+      this.uploading.set(false);
+    }
   }
 
   private showSuccess(message: string): void {
