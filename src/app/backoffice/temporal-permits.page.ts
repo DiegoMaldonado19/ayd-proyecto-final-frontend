@@ -39,9 +39,17 @@ import { TemporalPermit } from './models/temporal-permit.interface';
           Activos ({{ activePermits().length }})
         </button>
         <button
+          (click)="createNew()"
+          class="ml-auto inline-flex items-center justify-center rounded-md bg-green-600 text-white px-4 py-2 shadow-sm transition duration-200 hover:bg-green-700 font-medium">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Crear Nuevo
+        </button>
+        <button
           (click)="loadData()"
           [disabled]="loading()"
-          class="ml-auto inline-flex items-center justify-center rounded-md bg-white text-gray-700 border border-gray-300 px-4 py-2 shadow-sm transition duration-200 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none font-medium">
+          class="inline-flex items-center justify-center rounded-md bg-white text-gray-700 border border-gray-300 px-4 py-2 shadow-sm transition duration-200 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none font-medium">
           <svg class="w-4 h-4 mr-2" [class.animate-spin]="loading()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
@@ -222,6 +230,10 @@ export class TemporalPermitsBackofficePage implements OnInit {
 
   viewDetails(id: number): void {
     this.router.navigate(['/backoffice/temporal-permits', id]);
+  }
+
+  createNew(): void {
+    this.router.navigate(['/backoffice/temporal-permits/new']);
   }
 
   getUsagePercentage(permit: TemporalPermit): number {

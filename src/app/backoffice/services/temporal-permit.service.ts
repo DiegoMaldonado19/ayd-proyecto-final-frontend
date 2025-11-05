@@ -78,6 +78,19 @@ export class TemporalPermitService {
       map(response => response.data)
     );
   }
+
+  /**
+   * Crea un nuevo permiso temporal
+   * POST /temporal-permits
+   */
+  createTemporalPermit(data: CreateTemporalPermitRequest): Observable<TemporalPermit> {
+    return this.http.post<ApiResponse<TemporalPermit>>(
+      this.baseUrl,
+      data
+    ).pipe(
+      map(response => response.data)
+    );
+  }
 }
 
 /**
@@ -88,4 +101,17 @@ export interface UpdateTemporalPermitRequest {
   end_date: string;
   max_uses: number;
   allowed_branches: number[];
+}
+
+/**
+ * Request para crear un permiso temporal
+ */
+export interface CreateTemporalPermitRequest {
+  subscription_id: number;
+  temporal_plate: string;
+  start_date: string;
+  end_date: string;
+  max_uses: number;
+  allowed_branches: number[];
+  vehicle_type_id: number;
 }
