@@ -13,5 +13,17 @@ export const BACKOFFICE_ROUTES: Routes = [
   {
     path: 'plate-changes/:id',
     loadComponent: () => import('./plate-change-detail.page').then((m) => m.PlateChangeDetailPage),
+  },
+  {
+    path: 'temporal-permits',
+    loadComponent: () => import('./temporal-permits.page').then((m) => m.TemporalPermitsBackofficePage),
+  },
+  {
+    path: 'temporal-permits/:id',
+    loadComponent: () => import('./temporal-permit-detail.page').then((m) => m.TemporalPermitDetailPage),
+  },
+  {
+    path: 'temporal-permits/:id/edit',
+    loadComponent: () => import('./temporal-permit-edit.page').then((m) => m.TemporalPermitEditPage),
   }
 ];

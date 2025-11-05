@@ -15,6 +15,7 @@ import { TopNavComponent } from '../partials/navigation/topnav.component';
             [items]="[
               { label: '📊 Dashboard', link: '/backoffice/dashboard' },
               { label: '🔄 Cambios de Placa', link: '/backoffice/plate-changes' },
+              { label: '🎫 Permisos Temporales', link: '/backoffice/temporal-permits' },
               { label: '👤 Perfil', link: '/backoffice/profile' }
             ]"
           ></app-topnav>
