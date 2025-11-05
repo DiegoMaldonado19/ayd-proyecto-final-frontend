@@ -6,8 +6,9 @@ import { NotificationService } from '../shared/services/notification.service';
 
 /**
  * Gestión de Planes de Suscripción
- * CRUD completo usando SOLO endpoints reales del backend
- * Endpoints: GET/POST /subscription-plans, GET/PUT/DELETE /subscription-plans/{id}
+ * Sistema de 5 tipos de planes FIJOS que solo pueden ser EDITADOS
+ * Endpoints: GET /subscription-plans, PUT /subscription-plans/{id}
+ * Los planes no se pueden crear ni eliminar - son configuraciones fijas del sistema
  */
 @Component({
   selector: 'app-subscription-plans',
@@ -19,14 +20,39 @@ import { NotificationService } from '../shared/services/notification.service';
         <div>
           <h1 class="text-2xl font-bold text-gray-900">Planes de Suscripción</h1>
           <p class="text-sm text-gray-600 mt-1">
-            Gestiona los planes de suscripción mensual disponibles
+            Gestiona los 5 tipos de planes fijos del sistema ({{ plans().length }} planes configurados)
           </p>
         </div>
-        <button
-          (click)="openCreateModal()"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
-          Nuevo Plan
-        </button>
+        <div>
+          <!-- Filtro Activo/Inactivo -->
+          <select [(ngModel)]="filterActive" (change)="applyFilter()"
+                  class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="all">Todos los planes</option>
+            <option value="active">Solo activos</option>
+            <option value="inactive">Solo inactivos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Info sobre el sistema de planes -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex gap-3">
+          <div class="text-blue-600 text-xl">ℹ️</div>
+          <div class="flex-1">
+            <h3 class="font-semibold text-blue-900 mb-1">Sistema de Planes Fijos</h3>
+            <p class="text-sm text-blue-800 mb-2">
+              El sistema maneja <strong>5 tipos de planes predefinidos</strong> que solo pueden ser <strong>editados</strong>. 
+              Puedes modificar las horas mensuales, porcentajes de descuento y descripciones según las necesidades del negocio.
+            </p>
+            <div class="flex gap-2 flex-wrap text-xs">
+              <span class="px-2 py-1 bg-blue-100 rounded">A - Full Access</span>
+              <span class="px-2 py-1 bg-blue-100 rounded">B - Workweek</span>
+              <span class="px-2 py-1 bg-blue-100 rounded">C - Office Light</span>
+              <span class="px-2 py-1 bg-blue-100 rounded">D - Daily Flexible</span>
+              <span class="px-2 py-1 bg-blue-100 rounded">E - Night</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       @if (isLoading()) {
@@ -68,16 +94,11 @@ import { NotificationService } from '../shared/services/notification.service';
                 </div>
               </div>
 
-              <div class="flex gap-2 pt-3 border-t">
+              <div class="flex justify-center pt-3 border-t">
                 <button 
                   (click)="editPlan(plan)"
-                  class="flex-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded">
-                  Editar
-                </button>
-                <button 
-                  (click)="deletePlan(plan)"
-                  class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded">
-                  Eliminar
+                  class="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg font-medium">
+                  ✏️ Editar Plan
                 </button>
               </div>
             </div>
@@ -92,33 +113,27 @@ import { NotificationService } from '../shared/services/notification.service';
         }
       }
 
-      <!-- Modal: Crear/Editar Plan -->
+      <!-- Modal: Editar Plan -->
       @if (showPlanModal()) {
         <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6">
             <h3 class="text-lg font-semibold mb-4">
-              {{ isEditing() ? 'Editar Plan' : 'Nuevo Plan' }}
+              Editar Plan: {{ selectedPlan()?.plan_type_name }}
             </h3>
             
             <form (ngSubmit)="savePlan()" class="space-y-4">
-              @if (!isEditing()) {
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo de Plan *
-                  </label>
-                  <select
-                    [(ngModel)]="planForm.plan_type_id"
-                    name="plan_type_id"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">Seleccionar tipo</option>
-                    <option value="1">Plan Básico (A)</option>
-                    <option value="2">Plan Estándar (B)</option>
-                    <option value="3">Plan Premium (C)</option>
-                    <option value="4">Plan Empresarial (D)</option>
-                  </select>
-                </div>
-              }
+              <!-- Tipo de plan (solo lectura) -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Plan
+                </label>
+                <input
+                  type="text"
+                  [value]="selectedPlan()?.plan_type_code + ' - ' + selectedPlan()?.plan_type_name"
+                  readonly
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed" />
+                <p class="text-xs text-gray-500 mt-1">El tipo de plan no se puede cambiar</p>
+              </div>
 
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Horas Mensuales *</label>
@@ -176,41 +191,10 @@ import { NotificationService } from '../shared/services/notification.service';
                   type="submit"
                   [disabled]="!isFormValid() || isSaving()"
                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50">
-                  {{ isSaving() ? 'Guardando...' : (isEditing() ? 'Actualizar' : 'Crear') }}
+                  {{ isSaving() ? 'Guardando...' : 'Actualizar Plan' }}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      }
-
-      <!-- Modal: Confirmar Eliminación -->
-      @if (showDeleteModal()) {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 class="text-lg font-semibold mb-4 text-red-600">Eliminar Plan</h3>
-            
-            <p class="text-gray-700 mb-4">
-              ¿Estás seguro de eliminar el plan 
-              <strong>{{ selectedPlan()?.plan_type_name }}</strong>?
-            </p>
-            <p class="text-sm text-gray-600 mb-6">
-              Esta acción desactivará el plan y no estará disponible para nuevas suscripciones.
-            </p>
-
-            <div class="flex gap-3 justify-end">
-              <button 
-                (click)="closeDeleteModal()"
-                class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                Cancelar
-              </button>
-              <button 
-                [disabled]="isDeleting()"
-                (click)="confirmDelete()"
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50">
-                {{ isDeleting() ? 'Eliminando...' : 'Eliminar' }}
-              </button>
-            </div>
           </div>
         </div>
       }
@@ -224,15 +208,25 @@ export class SubscriptionPlansComponent implements OnInit {
   // Estado
   isLoading = signal(false);
   isSaving = signal(false);
-  isDeleting = signal(false);
   
   plans = signal<SubscriptionPlanResponse[]>([]);
+  allPlans = signal<SubscriptionPlanResponse[]>([]); // Todos los planes sin filtrar
   selectedPlan = signal<SubscriptionPlanResponse | null>(null);
-  isEditing = signal(false);
+  
+  // Filtro
+  filterActive: 'all' | 'active' | 'inactive' = 'all';
+  
+  // Tipos de plan disponibles (A, B, C, D, E) - FIJOS
+  readonly PLAN_TYPES = [
+    { id: 1, code: 'A', name: 'Full Access' },
+    { id: 2, code: 'B', name: 'Workweek' },
+    { id: 3, code: 'C', name: 'Office Light' },
+    { id: 4, code: 'D', name: 'Daily Flexible' },
+    { id: 5, code: 'E', name: 'Night' }
+  ];
 
-  // Modales
+  // Modal de edición
   showPlanModal = signal(false);
-  showDeleteModal = signal(false);
 
   // Formulario simple con validación manual
   planForm: any = {
@@ -251,7 +245,8 @@ export class SubscriptionPlansComponent implements OnInit {
     this.isLoading.set(true);
     try {
       const plans = await this.adminService.listSubscriptionPlans();
-      this.plans.set(plans);
+      this.allPlans.set(plans); // Guardar todos
+      this.applyFilter(); // Aplicar filtro inicial
     } catch (error: any) {
       this.notificationService.error(
         error.error?.message || 'Error al cargar los planes'
@@ -260,21 +255,20 @@ export class SubscriptionPlansComponent implements OnInit {
       this.isLoading.set(false);
     }
   }
-
-  openCreateModal() {
-    this.isEditing.set(false);
-    this.planForm = {
-      plan_type_id: '',
-      monthly_hours: '',
-      monthly_discount_percentage: '',
-      annual_additional_discount_percentage: '',
-      description: ''
-    };
-    this.showPlanModal.set(true);
+  
+  applyFilter() {
+    const all = this.allPlans();
+    
+    if (this.filterActive === 'active') {
+      this.plans.set(all.filter(p => p.is_active));
+    } else if (this.filterActive === 'inactive') {
+      this.plans.set(all.filter(p => !p.is_active));
+    } else {
+      this.plans.set(all); // Mostrar todos
+    }
   }
 
   editPlan(plan: SubscriptionPlanResponse) {
-    this.isEditing.set(true);
     this.selectedPlan.set(plan);
     this.planForm = {
       plan_type_id: plan.plan_type_id,
@@ -292,14 +286,7 @@ export class SubscriptionPlansComponent implements OnInit {
   }
 
   isFormValid(): boolean {
-    if (this.isEditing()) {
-      return this.planForm.monthly_hours > 0 &&
-             this.planForm.monthly_discount_percentage >= 0 &&
-             this.planForm.annual_additional_discount_percentage >= 0;
-    }
-    
-    return this.planForm.plan_type_id &&
-           this.planForm.monthly_hours > 0 &&
+    return this.planForm.monthly_hours > 0 &&
            this.planForm.monthly_discount_percentage >= 0 &&
            this.planForm.annual_additional_discount_percentage >= 0;
   }
@@ -310,66 +297,28 @@ export class SubscriptionPlansComponent implements OnInit {
       return;
     }
 
+    const plan = this.selectedPlan();
+    if (!plan) return;
+
     this.isSaving.set(true);
     try {
-      if (this.isEditing() && this.selectedPlan()) {
-        const updateRequest: UpdateSubscriptionPlanRequest = {
-          monthly_hours: Number(this.planForm.monthly_hours),
-          monthly_discount_percentage: Number(this.planForm.monthly_discount_percentage),
-          annual_additional_discount_percentage: Number(this.planForm.annual_additional_discount_percentage),
-          description: this.planForm.description
-        };
-        await this.adminService.updateSubscriptionPlan(this.selectedPlan()!.id, updateRequest);
-        this.notificationService.success('Plan actualizado exitosamente');
-      } else {
-        const createRequest: CreateSubscriptionPlanRequest = {
-          plan_type_id: Number(this.planForm.plan_type_id),
-          monthly_hours: Number(this.planForm.monthly_hours),
-          monthly_discount_percentage: Number(this.planForm.monthly_discount_percentage),
-          annual_additional_discount_percentage: Number(this.planForm.annual_additional_discount_percentage),
-          description: this.planForm.description
-        };
-        await this.adminService.createSubscriptionPlan(createRequest);
-        this.notificationService.success('Plan creado exitosamente');
-      }
+      const updateRequest: UpdateSubscriptionPlanRequest = {
+        monthly_hours: Number(this.planForm.monthly_hours),
+        monthly_discount_percentage: Number(this.planForm.monthly_discount_percentage),
+        annual_additional_discount_percentage: Number(this.planForm.annual_additional_discount_percentage),
+        description: this.planForm.description
+      };
+      await this.adminService.updateSubscriptionPlan(plan.id, updateRequest);
+      this.notificationService.success('Plan actualizado exitosamente');
       
       this.closePlanModal();
       await this.loadPlans();
     } catch (error: any) {
       this.notificationService.error(
-        error.error?.message || 'Error al guardar el plan'
+        error.error?.message || 'Error al actualizar el plan'
       );
     } finally {
       this.isSaving.set(false);
-    }
-  }
-
-  deletePlan(plan: SubscriptionPlanResponse) {
-    this.selectedPlan.set(plan);
-    this.showDeleteModal.set(true);
-  }
-
-  closeDeleteModal() {
-    this.showDeleteModal.set(false);
-    this.selectedPlan.set(null);
-  }
-
-  async confirmDelete() {
-    const plan = this.selectedPlan();
-    if (!plan) return;
-
-    this.isDeleting.set(true);
-    try {
-      await this.adminService.deleteSubscriptionPlan(plan.id);
-      this.notificationService.success('Plan eliminado exitosamente');
-      this.closeDeleteModal();
-      await this.loadPlans();
-    } catch (error: any) {
-      this.notificationService.error(
-        error.error?.message || 'Error al eliminar el plan'
-      );
-    } finally {
-      this.isDeleting.set(false);
     }
   }
 }
