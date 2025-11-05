@@ -62,4 +62,28 @@ export class PlateChangeService {
       map(response => response.data)
     );
   }
+
+  /**
+   * Aprobar una solicitud de cambio de placa
+   * PATCH /plate-changes/{id}/approve
+   */
+  approvePlateChange(id: number, reviewNotes: string): Observable<PlateChange> {
+    return this.http.patch<ApiResponse<PlateChange>>(`${this.baseUrl}/${id}/approve`, {
+      review_notes: reviewNotes
+    }).pipe(
+      map(response => response.data)
+    );
+  }
+
+  /**
+   * Rechazar una solicitud de cambio de placa
+   * PATCH /plate-changes/{id}/reject
+   */
+  rejectPlateChange(id: number, reviewNotes: string): Observable<PlateChange> {
+    return this.http.patch<ApiResponse<PlateChange>>(`${this.baseUrl}/${id}/reject`, {
+      review_notes: reviewNotes
+    }).pipe(
+      map(response => response.data)
+    );
+  }
 }

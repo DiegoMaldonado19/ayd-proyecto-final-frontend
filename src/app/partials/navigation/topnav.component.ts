@@ -18,7 +18,7 @@ export interface TopNavProps {
       <div class="flex items-center gap-3">
         <h1 class="text-lg md:text-xl">
           <span class="font-extrabold">ParkControl</span> 
-          <span class="hidden md:inline">- {{ roleLabel }}</span>
+          <span class="hidden md:inline"> - {{ roleLabel }}</span>
         </h1>
       </div>
 
