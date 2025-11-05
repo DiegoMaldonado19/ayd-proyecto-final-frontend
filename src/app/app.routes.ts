@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
+import { passwordChangeGuard } from './auth/password-change.guard';
 
 export const routes: Routes = [
 	{ path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -8,16 +9,33 @@ export const routes: Routes = [
 		loadComponent: () => import('./auth/login.component').then(m => m.LoginComponent)
 	},
 	{
+		path: 'auth/verify-2fa',
+		loadComponent: () => import('./auth/verify-2fa.component').then(m => m.Verify2FAComponent)
+	},
+	{
+		path: 'verify-2fa', // Ruta legacy para compatibilidad
+		redirectTo: 'auth/verify-2fa'
+	},
+	{
+		path: 'change-password',
+		canActivate: [authGuard],
+		loadComponent: () => import('./auth/change-password.component').then(m => m.ChangePasswordComponent)
+	},
+	{
 		path: 'ui-guide',
 		loadComponent: () => import('./ui-guide/ui-guide.component').then(m => m.UiGuideComponent)
 	},
 	{
 		path: '',
-		canActivate: [authGuard],
+		canActivate: [authGuard, passwordChangeGuard],
 		children: [
 			{
 				path: 'dashboard',
 				loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent)
+			},
+			{
+				path: 'profile',
+				loadComponent: () => import('./profile/user-profile.component').then(m => m.UserProfileComponent)
 			},
 			{
 				path: 'tickets',

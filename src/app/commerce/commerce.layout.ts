@@ -13,8 +13,8 @@ import { TopNavComponent } from '../partials/navigation/topnav.component';
           <app-topnav
             role="COMMERCE"
             [items]="[
-              { label: 'Dashboard', link: '/commerce/dashboard' },
-              { label: 'Perfil', link: '/commerce/profile' }
+              { label: '📊 Dashboard', link: '/commerce/dashboard' },
+              { label: '👤 Perfil', link: '/commerce/profile' }
             ]"
           ></app-topnav>
         </div>

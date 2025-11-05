@@ -1,0 +1,317 @@
+<div class="p-6 bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">📊 Reportes del Sistema</h1>
+    <p class="text-gray-600">Análisis completo de operaciones, ingresos y métricas</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mb-6 bg-white rounded-lg shadow-sm">
+    <nav class="flex border-b border-gray-200">
+      @for (tab of tabs; track tab.id) {
+        <button
+          (click)="activeTab.set(tab.id)"
+          class="px-6 py-4 font-medium text-sm transition-all border-b-2"
+          [class.border-blue-500]="activeTab() === tab.id"
+          [class.text-blue-600]="activeTab() === tab.id"
+          [class.bg-blue-50]="activeTab() === tab.id"
+          [class.border-transparent]="activeTab() !== tab.id"
+          [class.text-gray-500]="activeTab() !== tab.id"
+          [class.hover:text-gray-700]="activeTab() !== tab.id"
+          [class.hover:bg-gray-50]="activeTab() !== tab.id"
+        >
+          <span class="mr-2">{{ tab.icon }}</span>
+          {{ tab.label }}
+        </button>
+      }
+    </nav>
+  </div>
+
+  <!-- Export Buttons -->
+  <div class="mb-6 flex justify-end gap-3">
+    <button 
+      (click)="exportReport('PDF')" 
+      [disabled]="exporting() || loading()"
+      class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-sm"
+    >
+      📄 Exportar PDF
+    </button>
+    <button 
+      (click)="exportReport('EXCEL')" 
+      [disabled]="exporting() || loading()"
+      class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-sm"
+    >
+      📊 Exportar Excel
+    </button>
+    <button 
+      (click)="exportReport('PNG')" 
+      [disabled]="exporting() || loading()"
+      class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-sm"
+    >
+      🖼️ Exportar PNG
+    </button>
+  </div>
+
+  <!-- Content -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+    @if (loading()) {
+      <div class="flex flex-col items-center justify-center py-20">
+        <svg class="animate-spin h-12 w-12 text-blue-600 mb-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-gray-600 font-medium">Cargando reporte...</p>
+      </div>
+    } @else {
+      
+      <!-- Occupancy Report -->
+      @if (activeTab() === 'occupancy') {
+        <div id="report-content-occupancy" class="p-6">
+          <h2 class="text-2xl font-bold mb-6 text-gray-800">🚗 Ocupación por Sucursal y Tipo de Vehículo</h2>
+          
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200 shadow-sm">
+              <p class="text-sm text-blue-700 font-semibold mb-1">Capacidad Total</p>
+              <p class="text-3xl font-bold text-blue-900">{{ getTotalSpots() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 shadow-sm">
+              <p class="text-sm text-green-700 font-semibold mb-1">Espacios Ocupados</p>
+              <p class="text-3xl font-bold text-green-900">{{ getOccupiedSpots() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200 shadow-sm">
+              <p class="text-sm text-purple-700 font-semibold mb-1">Espacios Disponibles</p>
+              <p class="text-3xl font-bold text-purple-900">{{ getAvailableSpots() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border border-orange-200 shadow-sm">
+              <p class="text-sm text-orange-700 font-semibold mb-1">Ocupación Promedio</p>
+              <p class="text-3xl font-bold text-orange-900">{{ getAverageOccupancy() }}%</p>
+            </div>
+          </div>
+
+          <!-- Table -->
+          @if (occupancyData().length > 0) {
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Sucursal</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tipo Vehículo</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Capacidad</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Ocupados Ahora</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Pico Máximo</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Promedio</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">% Ocupación</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  @for (item of occupancyData(); track $index) {
+                    <tr class="hover:bg-gray-50 transition-colors">
+                      <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ item.branch_name || '-' }}</td>
+                      <td class="px-6 py-4">
+                        <span [class]="getVehicleTypeBadge(item.vehicle_type)">
+                          {{ getVehicleTypeLabel(item.vehicle_type) }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 text-sm text-gray-700">{{ item.total_capacity || 0 }}</td>
+                      <td class="px-6 py-4 text-sm text-green-600 font-semibold">{{ item.current_occupancy || 0 }}</td>
+                      <td class="px-6 py-4 text-sm text-orange-600 font-semibold">{{ item.peak_occupancy || 0 }}</td>
+                      <td class="px-6 py-4 text-sm text-blue-600 font-semibold">{{ (item.average_occupancy || 0).toFixed(1) }}</td>
+                      <td class="px-6 py-4 text-sm font-bold text-gray-900">{{ (item.occupancy_percentage || 0).toFixed(1) }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="text-center py-12 text-gray-500">
+              <p class="text-lg">No hay datos de ocupación disponibles</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Billing Report -->
+      @if (activeTab() === 'billing') {
+        <div id="report-content-billing" class="p-6">
+          <h2 class="text-2xl font-bold mb-6 text-gray-800">💰 Facturación por Sucursal y Método de Pago</h2>
+          
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 shadow-sm">
+              <p class="text-sm text-green-700 font-semibold mb-1">Ingresos Totales</p>
+              <p class="text-3xl font-bold text-green-900">Q{{ getTotalRevenue().toFixed(2) }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200 shadow-sm">
+              <p class="text-sm text-purple-700 font-semibold mb-1">Tickets Totales</p>
+              <p class="text-3xl font-bold text-purple-900">{{ getTotalTickets() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200 shadow-sm">
+              <p class="text-sm text-blue-700 font-semibold mb-1">Valor Promedio</p>
+              <p class="text-3xl font-bold text-blue-900">Q{{ getAverageTicketValue().toFixed(2) }}</p>
+            </div>
+          </div>
+
+          <!-- Table -->
+          @if (billingData().length > 0) {
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Sucursal</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Método de Pago</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tickets</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Valor Promedio</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Total Ingresos</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  @for (item of billingData(); track $index) {
+                    <tr class="hover:bg-gray-50 transition-colors">
+                      <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ item.branch_name || '-' }}</td>
+                      <td class="px-6 py-4">
+                        <span [class]="getPaymentMethodBadge(item.payment_method)">
+                          {{ item.payment_method || '-' }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 text-sm text-gray-700">{{ item.total_tickets || 0 }}</td>
+                      <td class="px-6 py-4 text-sm text-blue-600 font-semibold">Q{{ (item.average_ticket_value || 0).toFixed(2) }}</td>
+                      <td class="px-6 py-4 text-lg text-green-600 font-bold">Q{{ (item.total_revenue || 0).toFixed(2) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="text-center py-12 text-gray-500">
+              <p class="text-lg">No hay datos de facturación disponibles</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Subscriptions Report -->
+      @if (activeTab() === 'subscriptions') {
+        <div id="report-content-subscriptions" class="p-6">
+          <h2 class="text-2xl font-bold mb-6 text-gray-800">💳 Resumen de Suscripciones</h2>
+          
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 shadow-sm">
+              <p class="text-sm text-green-700 font-semibold mb-1">Suscripciones Activas</p>
+              <p class="text-3xl font-bold text-green-900">{{ getTotalActiveSubs() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 shadow-sm">
+              <p class="text-sm text-gray-700 font-semibold mb-1">Suscripciones Expiradas</p>
+              <p class="text-3xl font-bold text-gray-900">{{ getTotalExpiredSubs() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-5 border border-yellow-200 shadow-sm">
+              <p class="text-sm text-yellow-700 font-semibold mb-1">Por Expirar Pronto</p>
+              <p class="text-3xl font-bold text-yellow-900">{{ getTotalExpiringSoon() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200 shadow-sm">
+              <p class="text-sm text-blue-700 font-semibold mb-1">Total Suscripciones</p>
+              <p class="text-3xl font-bold text-blue-900">{{ getTotalSubs() }}</p>
+            </div>
+          </div>
+
+          <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                  Este reporte muestra un resumen general del estado de todas las suscripciones del sistema.
+                  Las suscripciones "Por Expirar Pronto" vencen en los próximos 7 días.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Commerce Benefits Report -->
+      @if (activeTab() === 'commerce-benefits') {
+        <div id="report-content-commerce-benefits" class="p-6">
+          <h2 class="text-2xl font-bold mb-6 text-gray-800">🏪 Ingresos por Suscripciones</h2>
+          
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 shadow-sm">
+              <p class="text-sm text-green-700 font-semibold mb-1">Suscripciones Activas</p>
+              <p class="text-3xl font-bold text-green-900">{{ getActiveSubsFromBenefits() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200 shadow-sm">
+              <p class="text-sm text-blue-700 font-semibold mb-1">Total Vendidas</p>
+              <p class="text-3xl font-bold text-blue-900">{{ getTotalSubsSold() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200 shadow-sm">
+              <p class="text-sm text-purple-700 font-semibold mb-1">Ingresos Totales</p>
+              <p class="text-3xl font-bold text-purple-900">Q{{ getTotalRevenueFromSubs().toFixed(2) }}</p>
+            </div>
+          </div>
+
+          <div class="bg-purple-50 border-l-4 border-purple-400 p-4 rounded">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-purple-700">
+                  Este reporte muestra los ingresos generados por la venta de suscripciones.
+                  Los ingresos totales incluyen todas las suscripciones vendidas históricamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Incidents Report -->
+      @if (activeTab() === 'incidents') {
+        <div id="report-content-incidents" class="p-6">
+          <h2 class="text-2xl font-bold mb-6 text-gray-800">⚠️ Resumen de Incidencias</h2>
+          
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-5 border border-red-200 shadow-sm">
+              <p class="text-sm text-red-700 font-semibold mb-1">Total Incidencias</p>
+              <p class="text-3xl font-bold text-red-900">{{ getTotalIncidents() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-5 border border-yellow-200 shadow-sm">
+              <p class="text-sm text-yellow-700 font-semibold mb-1">Pendientes</p>
+              <p class="text-3xl font-bold text-yellow-900">{{ getPendingIncidents() }}</p>
+            </div>
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200 shadow-sm">
+              <p class="text-sm text-green-700 font-semibold mb-1">Resueltas</p>
+              <p class="text-3xl font-bold text-green-900">{{ getResolvedIncidents() }}</p>
+            </div>
+          </div>
+
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                  Este reporte muestra el estado actual de las incidencias registradas en el sistema.
+                  Las incidencias pendientes requieren atención inmediata.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+    }
+  </div>
+</div>
+

@@ -1,6 +1,6 @@
 import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpBackend } from '@angular/common/http';
 import { API_BASE } from '../api.config';
 import { firstValueFrom } from 'rxjs';
 
@@ -37,7 +37,7 @@ export interface TokenResponse {
 
 export interface Verify2FARequest {
   code: string;
-  temp_token: string;
+  email: string; // El backend necesita el email, no temp_token
 }
 
 export interface TwoFAResponse {
@@ -51,6 +51,7 @@ export interface ChangePasswordRequest {
   current_password: string;
   new_password: string;
   confirm_password: string;
+  code?: string; // Código 2FA opcional (requerido si el usuario tiene 2FA habilitado)
 }
 
 export interface ResetPasswordRequest {
@@ -78,6 +79,10 @@ export interface ApiResponse<T> {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private platformId = inject(PLATFORM_ID);
+  private httpBackend = inject(HttpBackend);
+  // HttpClient SIN interceptores (para login, 2FA - endpoints públicos)
+  private httpNoAuth = new HttpClient(this.httpBackend);
+  // HttpClient CON interceptores (para endpoints autenticados como /profile)
   private http = inject(HttpClient);
   private isBrowser = isPlatformBrowser(this.platformId);
   
@@ -89,17 +94,39 @@ export class AuthService {
   // Signals
   public isAuthenticated = signal<boolean>(this.isBrowser ? !!this.getToken() : false);
   public currentUser = signal<LoginResponse | null>(this.isBrowser ? this.loadUser() : null);
+  
+  // Para control de inicialización
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
     // Cargar usuario al iniciar si hay token
     if (this.isBrowser && this.getToken()) {
-      this.loadProfile().catch((error) => {
-        if (error instanceof HttpErrorResponse && [401, 403].includes(error.status)) {
-          this.clearAuth();
-          return;
-        }
-        console.error('Error al recuperar la sesión', error);
-      });
+      this.initializationPromise = this.loadProfile()
+        .then(() => {
+          // Perfil cargado correctamente
+          console.log('✅ Sesión recuperada correctamente');
+        })
+        .catch((error) => {
+          if (error instanceof HttpErrorResponse && [401, 403].includes(error.status)) {
+            console.warn('⚠️ Token expirado o inválido, limpiando sesión');
+            this.clearAuth();
+            return;
+          }
+          console.error('❌ Error al recuperar la sesión', error);
+          // No limpiar si es error de red, mantener token para reintentar
+        })
+        .finally(() => {
+          this.initializationPromise = null;
+        });
+    }
+  }
+  
+  /**
+   * Esperar a que termine la inicialización del servicio
+   */
+  async waitForInitialization(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
     }
   }
 
@@ -158,7 +185,7 @@ export class AuthService {
   async login(email: string, password: string): Promise<LoginResponse> {
     const request: LoginRequest = { email, password };
     const response = await firstValueFrom(
-      this.http.post<LoginResponse>(`${API_BASE}/auth/login`, request)
+      this.httpNoAuth.post<LoginResponse>(`${API_BASE}/auth/login`, request)
     );
 
     // Si requiere 2FA, no guardar tokens todavía
@@ -178,13 +205,13 @@ export class AuthService {
   }
 
   /**
-   * Verificar código 2FA
+   * Verificar código 2FA durante login
    * POST /auth/2fa/verify
    */
-  async verify2FA(code: string, tempToken: string): Promise<LoginResponse> {
-    const request: Verify2FARequest = { code, temp_token: tempToken };
+  async verify2FA(code: string, email: string): Promise<LoginResponse> {
+    const request: Verify2FARequest = { code, email };
     const response = await firstValueFrom(
-      this.http.post<LoginResponse>(`${API_BASE}/auth/2fa/verify`, request)
+      this.httpNoAuth.post<LoginResponse>(`${API_BASE}/auth/2fa/verify`, request)
     );
     this.saveAuth(response);
     return response;
@@ -221,7 +248,7 @@ export class AuthService {
 
     const request: RefreshTokenRequest = { refresh_token: refreshToken };
     const response = await firstValueFrom(
-      this.http.post<TokenResponse>(`${API_BASE}/auth/refresh`, request)
+      this.httpNoAuth.post<TokenResponse>(`${API_BASE}/auth/refresh`, request)
     );
 
     // Actualizar tokens
@@ -288,23 +315,74 @@ export class AuthService {
   async resetPassword(email: string): Promise<void> {
     const request: ResetPasswordRequest = { email };
     await firstValueFrom(
-      this.http.post<ApiResponse<void>>(`${API_BASE}/auth/password/reset`, request)
+      this.httpNoAuth.post<ApiResponse<void>>(`${API_BASE}/auth/password/reset`, request)
     );
   }
 
   /**
-   * Cambiar contraseña
-   * POST /auth/password/change
+   * FLUJO 1: Primer cambio de contraseña (sin 2FA)
+   * POST /auth/password/first-change
+   * Usado cuando el usuario inicia sesión por primera vez
    */
-  async changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<void> {
-    const request: ChangePasswordRequest = {
-      current_password: currentPassword,
+  async firstPasswordChange(currentPassword: string, newPassword: string, confirmPassword: string): Promise<void> {
+    const request = {
+      current_password: currentPassword,  // Backend lo requiere incluso en primer cambio
       new_password: newPassword,
       confirm_password: confirmPassword
     };
+    
+    await firstValueFrom(
+      this.http.post<ApiResponse<void>>(`${API_BASE}/auth/password/first-change`, request)
+    );
+
+    // Actualizar el estado del usuario
+    const user = this.currentUser();
+    if (user) {
+      const updatedUser = { ...user, requires_password_change: false };
+      localStorage.setItem('parkcontrol_user', JSON.stringify(updatedUser));
+      this.currentUser.set(updatedUser);
+    }
+  }
+
+  /**
+   * FLUJO 2a: Solicitar código 2FA para cambio regular de contraseña
+   * POST /auth/password/change/request
+   * Envía código al email del usuario autenticado
+   */
+  async requestPasswordChangeCode(currentPassword: string): Promise<void> {
+    const request = {
+      current_password: currentPassword
+    };
+    
+    await firstValueFrom(
+      this.http.post<ApiResponse<void>>(`${API_BASE}/auth/password/change/request`, request)
+    );
+  }
+
+  /**
+   * FLUJO 2b: Completar cambio regular de contraseña (con 2FA)
+   * POST /auth/password/change
+   * Valida código 2FA y cambia la contraseña
+   */
+  async changePassword(currentPassword: string, newPassword: string, confirmPassword: string, code: string): Promise<void> {
+    const request: ChangePasswordRequest = {
+      current_password: currentPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+      code: code
+    };
+    
     await firstValueFrom(
       this.http.post<ApiResponse<void>>(`${API_BASE}/auth/password/change`, request)
     );
+
+    // Actualizar el estado del usuario
+    const user = this.currentUser();
+    if (user) {
+      const updatedUser = { ...user, requires_password_change: false };
+      localStorage.setItem('parkcontrol_user', JSON.stringify(updatedUser));
+      this.currentUser.set(updatedUser);
+    }
   }
 
   /**

@@ -190,17 +190,28 @@ export class LoginComponent {
 
       // Caso 1: Requiere verificación 2FA
       if (response.requires_2fa_verification) {
-        this.notification.info('Se requiere verificación 2FA');
-        this.router.navigate(['/auth/verify-2fa'], {
-          state: { tempToken: response.access_token },
+        // Redirigir INMEDIATAMENTE a la página de verificación 2FA
+        // El backend ya envió el código por correo, solo necesitamos pasar el email
+        await this.router.navigate(['/auth/verify-2fa'], {
+          queryParams: { 
+            email: response.email || this.email
+          }
         });
+        // Mostrar notificación DESPUÉS de la navegación
+        this.notification.info('Se ha enviado un código de verificación a tu correo electrónico');
         return;
       }
 
       // Caso 2: Requiere cambio de contraseña
       if (response.requires_password_change) {
-        this.notification.warning('Debes cambiar tu contraseña');
-        this.router.navigate(['/auth/change-password']);
+        // Guardar la contraseña temporal en sessionStorage para el primer cambio
+        // El backend la necesita en /auth/password/first-change
+        sessionStorage.setItem('parkcontrol_temp_password', this.password);
+        
+        // Redirigir directamente a cambio de contraseña
+        // El componente se encargará de solicitar el código 2FA
+        await this.router.navigate(['/change-password']);
+        this.notification.warning('Debes cambiar tu contraseña antes de continuar');
         return;
       }
 
