@@ -21,6 +21,23 @@ export interface PlateChange {
   created_at: string;
   updated_at: string;
   evidence_count: number;
+  evidences: PlateChangeEvidence[];
+}
+
+/**
+ * Evidencia de cambio de placa
+ */
+export interface PlateChangeEvidence {
+  id: number;
+  change_request_id: number;
+  document_type_id: number;
+  document_type_code: string;
+  document_type_name: string;
+  file_name: string;
+  file_url: string;
+  file_size: number;
+  uploaded_by: string;
+  uploaded_at: string;
 }
 
 /**

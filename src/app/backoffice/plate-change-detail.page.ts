@@ -126,14 +126,75 @@ import { PlateChange } from './models/plate-change.interface';
 
         <!-- Evidencias -->
         <div class="rounded-lg bg-white border border-gray-200 p-6 shadow-sm">
-          <h2 class="text-gray-600 text-xs font-semibold uppercase mb-4">Evidencias</h2>
-          <div class="flex items-center justify-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+          <h2 class="text-gray-600 text-xs font-semibold uppercase mb-4">
+            Evidencias ({{ plateChange()!.evidence_count }})
+          </h2>
+          
+          <div *ngIf="plateChange()!.evidences && plateChange()!.evidences.length > 0" class="space-y-3">
+            <div *ngFor="let evidence of plateChange()!.evidences" 
+                 class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-yellow-400 transition">
+              <!-- Icono según tipo de archivo -->
+              <div class="flex-shrink-0">
+                <div *ngIf="isImage(evidence.file_name)" class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div *ngIf="!isImage(evidence.file_name)" class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Información del archivo -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-sm font-semibold text-gray-900 truncate">{{ evidence.file_name }}</h3>
+                    <p class="text-xs text-gray-600 mt-1">{{ evidence.document_type_name }}</p>
+                  </div>
+                  <span class="inline-flex items-center rounded-full bg-gray-200 text-gray-700 px-2 py-0.5 text-xs font-medium">
+                    {{ formatFileSize(evidence.file_size) }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                    </svg>
+                    {{ evidence.uploaded_by }}
+                  </span>
+                  <span class="flex items-center">
+                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                    </svg>
+                    {{ formatDate(evidence.uploaded_at) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Botón de descarga/vista -->
+              <div class="flex-shrink-0">
+                <a [href]="evidence.file_url" 
+                   target="_blank"
+                   class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-yellow-400 text-gray-900 hover:bg-yellow-500 transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!plateChange()!.evidences || plateChange()!.evidences.length === 0" class="flex items-center justify-center py-8 bg-gray-50 rounded-lg border border-gray-200">
             <div class="text-center">
-              <svg class="w-16 h-16 text-blue-500 mx-auto mb-3" fill="currentColor" viewBox="0 0 20 20">
+              <svg class="w-16 h-16 text-gray-400 mx-auto mb-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
               </svg>
-              <div class="text-gray-900 font-semibold text-lg">{{ plateChange()!.evidence_count }} archivos adjuntos</div>
-              <div class="text-xs text-gray-600 mt-1">Fotografías o documentos de soporte</div>
+              <div class="text-gray-900 font-semibold text-lg">Sin evidencias</div>
+              <div class="text-xs text-gray-600 mt-1">No se han adjuntado archivos a esta solicitud</div>
             </div>
           </div>
         </div>
@@ -305,6 +366,19 @@ export class PlateChangeDetailPage implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  isImage(fileName: string): boolean {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
+    return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
   }
 
   goBack(): void {
