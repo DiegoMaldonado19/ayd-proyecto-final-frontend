@@ -6,4 +6,8 @@ export const BACKOFFICE_ROUTES: Routes = [
     path: 'dashboard',
     loadComponent: () => import('./backoffice.component').then((m) => m.BackofficeDashboardComponent),
   },
+  {
+    path: 'plate-changes',
+    loadComponent: () => import('./plate-changes.page').then((m) => m.PlateChangesBackofficePage),
+  }
 ];
