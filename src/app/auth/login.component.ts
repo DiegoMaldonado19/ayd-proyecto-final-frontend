@@ -251,22 +251,22 @@ export class LoginComponent {
       default -> "UNKNOWN";
     */
     switch (role) {
-      case 'ADMIN':
+      case 'Administrador':
         this.router.navigate(['/admin/dashboard']);
         break;
-      case 'BRANCH_OPERATOR':
+      case 'Operador Sucursal':
         this.router.navigate(['/branches/dashboard']);
         break;
-      case 'BACK_OFFICE':
+      case 'Operador Back Office':
         this.router.navigate(['/backoffice/dashboard']);
         break;
-      case 'CLIENT':
+      case 'Cliente':
         this.router.navigate(['/client/dashboard']);
         break;
-      case 'COMPANY':
-        this.router.navigate(['/company/dashboard']);
-        break;
-      case 'COMMERCE':
+      // case 'COMPANY':
+      //   this.router.navigate(['/company/dashboard']);
+      //   break;
+      case 'Administrador Flotilla':
         this.router.navigate(['/commerce/dashboard']);
         break;
       default:
