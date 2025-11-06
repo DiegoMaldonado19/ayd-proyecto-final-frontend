@@ -56,3 +56,30 @@ export interface RenewSubscriptionRequest {
   is_annual: boolean;
   auto_renew_enabled: boolean;
 }
+
+/**
+ * Request para crear/comprar nueva suscripción
+ */
+export interface CreateSubscriptionRequest {
+  plan_id: number;
+  license_plate: string;
+  is_annual: boolean;
+  auto_renew_enabled: boolean;
+}
+
+/**
+ * Plan de suscripción disponible
+ */
+export interface SubscriptionPlan {
+  id: number;
+  plan_type_id: number;
+  plan_type_name: string;
+  plan_type_code: string;
+  monthly_hours: number;
+  monthly_discount_percentage: number;
+  annual_additional_discount_percentage: number;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

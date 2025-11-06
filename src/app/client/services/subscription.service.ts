@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../../api.config';
-import { Subscription, SubscriptionBalance, RenewSubscriptionRequest } from '../models/subscription.interface';
+import { Subscription, SubscriptionBalance, RenewSubscriptionRequest, CreateSubscriptionRequest, SubscriptionPlan } from '../models/subscription.interface';
 
 /**
  * Servicio para gestionar la suscripción del cliente
@@ -48,5 +48,23 @@ export class SubscriptionService {
    */
   renewSubscription(subscriptionId: number, request: RenewSubscriptionRequest): Observable<Subscription> {
     return this.http.put<Subscription>(`${this.baseUrl}/${subscriptionId}`, request);
+  }
+
+  /**
+   * Obtiene todos los planes de suscripción disponibles
+   * GET /subscription-plans
+   * Endpoint público - no requiere autenticación
+   */
+  getAvailablePlans(): Observable<SubscriptionPlan[]> {
+    return this.http.get<SubscriptionPlan[]>(`${API_BASE}/subscription-plans`);
+  }
+
+  /**
+   * Crea una nueva suscripción para el usuario autenticado
+   * POST /subscriptions/my-subscription
+   * @param request Datos de la nueva suscripción
+   */
+  createSubscription(request: CreateSubscriptionRequest): Observable<Subscription> {
+    return this.http.post<Subscription>(`${this.baseUrl}`, request);
   }
 }

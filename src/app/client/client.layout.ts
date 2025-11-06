@@ -14,7 +14,8 @@ import { TopNavComponent } from '../partials/navigation/topnav.component';
             role="CLIENT"
             [items]="[
               { label: '📊 Dashboard', link: '/client/dashboard' },
-              { label: '👤 Perfil', link: '/client/profile' }
+              { label: '� Comprar Suscripción', link: '/client/purchase-subscription' },
+              { label: '�👤 Perfil', link: '/client/profile' }
             ]"
           ></app-topnav>
         </div>

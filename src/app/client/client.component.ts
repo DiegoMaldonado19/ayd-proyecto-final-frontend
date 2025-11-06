@@ -531,7 +531,6 @@ export class ClientDashboardComponent implements OnInit {
   }
 
   navigateToPurchase(): void {
-    // TODO: Implementar navegación a compra de suscripción
-    console.log('Navigate to purchase subscription');
+    this.router.navigate(['/client/purchase-subscription']);
   }
 }
