@@ -8,13 +8,15 @@ import { TopNavComponent } from '../partials/navigation/topnav.component';
   imports: [RouterOutlet, TopNavComponent],
   template: `
     <div class="min-h-screen bg-slate-50 text-slate-800">
-      <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
-        <div class="mx-auto max-w-6xl px-4 h-16 flex flex-col justify-center">
+      <header class="sticky top-0 z-40 bg-white/65 backdrop-blur-sm border-b">
+        <div class="mx-auto max-w-7xl px-4 h-16 flex flex-col justify-center">
           <app-topnav
             role="BACK_OFFICE"
             [items]="[
-              { label: '📊 Dashboard', link: '/backoffice/dashboard' },
-              { label: '👤 Perfil', link: '/backoffice/profile' }
+              { label: 'Dashboard', link: '/backoffice/dashboard' },
+              { label: 'Cambios de Placa', link: '/backoffice/plate-changes' },
+              { label: 'Permisos Temporales', link: '/backoffice/temporal-permits' },
+              { label: 'Perfil', link: '/backoffice/profile' }
             ]"
           ></app-topnav>
         </div>
@@ -29,3 +31,4 @@ import { TopNavComponent } from '../partials/navigation/topnav.component';
   `,
 })
 export class BackOfficeLayout {}
+

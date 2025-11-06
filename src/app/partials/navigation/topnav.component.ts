@@ -18,7 +18,7 @@ export interface TopNavProps {
       <div class="flex items-center gap-3">
         <h1 class="text-lg md:text-xl">
           <span class="font-extrabold">ParkControl</span> 
-          <span class="hidden md:inline">- {{ roleLabel }}</span>
+          <span class="hidden md:inline"> - {{ roleLabel }}</span>
         </h1>
       </div>
 
@@ -28,7 +28,7 @@ export interface TopNavProps {
         <li class="font-medium text-slate-700 transition-colors">
           <a
             [routerLink]="item.link"
-            class="relative hover:bg-gradient-to-r hover:text-transparent hover:bg-clip-text px-3 py-2 rounded-md before:content-[''] before:absolute before:inset-0 before:rounded-md before:-z-10 before:opacity-0 hover:before:opacity-100 before:transition-opacity before:bg-slate-200"
+            class="relative hover:bg-gradient-to-r hover:text-transparent hover:bg-clip-text px-3 py-2 rounded-lg before:content-[''] before:absolute before:inset-0 before:rounded-md before:-z-10 before:opacity-0 hover:before:opacity-100 before:transition-opacity before:bg-gradient-to-r before:from-neutral-200/30 before:to-neutral-300/30 hover:ring-1 hover:ring-neutral-300 transition-shadow"
             [class]="roleColorClassMap[this.role() || ''] || ''"
             >{{ item.label }}</a
           >
