@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { API_BASE } from '../../api.config';
-import { PlateChange, ReviewPlateChangeRequest } from '../models/plate-change.interface';
+import { PlateChange, ReviewPlateChangeRequest, ApprovePlateChangeRequest } from '../models/plate-change.interface';
 
 /**
  * Respuesta estándar del backend
@@ -67,10 +67,8 @@ export class PlateChangeService {
    * Aprobar una solicitud de cambio de placa
    * PATCH /plate-changes/{id}/approve
    */
-  approvePlateChange(id: number, reviewNotes: string): Observable<PlateChange> {
-    return this.http.patch<ApiResponse<PlateChange>>(`${this.baseUrl}/${id}/approve`, {
-      review_notes: reviewNotes
-    }).pipe(
+  approvePlateChange(id: number, request: ApprovePlateChangeRequest): Observable<PlateChange> {
+    return this.http.patch<ApiResponse<PlateChange>>(`${this.baseUrl}/${id}/approve`, request).pipe(
       map(response => response.data)
     );
   }

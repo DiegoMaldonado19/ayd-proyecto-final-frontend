@@ -41,6 +41,16 @@ export interface PlateChangeEvidence {
 }
 
 /**
+ * Request para aprobar cambio de placa
+ */
+export interface ApprovePlateChangeRequest {
+  review_notes?: string;
+  apply_administrative_charge?: boolean;
+  administrative_charge_amount?: number;
+  administrative_charge_reason?: string;
+}
+
+/**
  * Request para aprobar/rechazar cambio de placa
  */
 export interface ReviewPlateChangeRequest {

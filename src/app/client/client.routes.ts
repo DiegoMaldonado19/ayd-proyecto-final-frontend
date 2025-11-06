@@ -6,4 +6,8 @@ export const CLIENT_ROUTES: Routes = [
     path: 'dashboard',
     loadComponent: () => import('./client.component').then((m) => m.ClientDashboardComponent),
   },
+  {
+    path: 'purchase-subscription',
+    loadComponent: () => import('./purchase-subscription.page').then((m) => m.PurchaseSubscriptionPage),
+  },
 ];

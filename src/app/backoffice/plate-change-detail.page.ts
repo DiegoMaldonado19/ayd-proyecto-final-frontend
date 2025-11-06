@@ -311,7 +311,7 @@ interface DocumentType {
         <!-- Acciones (solo si está pendiente) -->
         <div *ngIf="plateChange()!.status_code === 'PENDING'" class="flex gap-4 sticky bottom-6 bg-white p-4 rounded-lg border border-gray-200 shadow-lg">
           <button
-            (click)="approvePlateChange()"
+            (click)="openApprovalForm()"
             [disabled]="processing()"
             class="flex-1 inline-flex items-center justify-center rounded-md bg-green-600 text-white px-6 py-3 shadow-md transition duration-200 hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none font-semibold">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,6 +328,135 @@ interface DocumentType {
             </svg>
             Rechazar Solicitud
           </button>
+        </div>
+      </div>
+
+      <!-- Modal de Aprobación -->
+      <div *ngIf="showApprovalForm()" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <!-- Header -->
+          <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-bold text-gray-900">Aprobar Cambio de Placa</h2>
+              <button
+                (click)="closeApprovalForm()"
+                [disabled]="processing()"
+                class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-6">
+            <!-- Notas de revisión -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Notas de Revisión
+                <span class="text-gray-500 font-normal">(opcional)</span>
+              </label>
+              <textarea
+                [(ngModel)]="approvalForm().review_notes"
+                rows="3"
+                maxlength="500"
+                placeholder="Ej: Documentación verificada y aprobada"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"></textarea>
+              <p class="mt-1 text-xs text-gray-500">{{ approvalForm().review_notes.length }}/500 caracteres</p>
+            </div>
+
+            <!-- Cargo Administrativo -->
+            <div class="border-t border-gray-200 pt-6">
+              <div class="flex items-start mb-4">
+                <input
+                  type="checkbox"
+                  id="applyCharge"
+                  [(ngModel)]="approvalForm().apply_administrative_charge"
+                  class="mt-1 h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                <label for="applyCharge" class="ml-3">
+                  <span class="block text-sm font-medium text-gray-900">Aplicar cargo administrativo manualmente</span>
+                  <span class="block text-xs text-gray-500 mt-1">
+                    Activa esta opción para establecer un monto personalizado de cargo administrativo
+                  </span>
+                </label>
+              </div>
+
+              <!-- Campos de cargo (solo si está activado) -->
+              <div *ngIf="approvalForm().apply_administrative_charge" class="ml-7 space-y-4 bg-gray-50 p-4 rounded-md border border-gray-200">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Monto del Cargo <span class="text-red-500">*</span>
+                  </label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-2 text-gray-500">Q</span>
+                    <input
+                      type="number"
+                      [(ngModel)]="approvalForm().administrative_charge_amount"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Razón del Cargo <span class="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    [(ngModel)]="approvalForm().administrative_charge_reason"
+                    rows="2"
+                    maxlength="500"
+                    placeholder="Ej: Procesamiento urgente, cambio fuera de horario, etc."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"></textarea>
+                  <p class="mt-1 text-xs text-gray-500">{{ approvalForm().administrative_charge_reason.length }}/500 caracteres</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen -->
+            <div class="bg-green-50 border border-green-200 rounded-md p-4">
+              <h3 class="text-sm font-semibold text-green-900 mb-2">Resumen de Aprobación</h3>
+              <div class="space-y-1 text-sm text-green-800">
+                <div class="flex justify-between">
+                  <span>Solicitud:</span>
+                  <span class="font-mono">#{{ plateChange()!.id }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Cambio:</span>
+                  <span class="font-mono">{{ plateChange()!.old_license_plate }} → {{ plateChange()!.new_license_plate }}</span>
+                </div>
+                <div *ngIf="approvalForm().apply_administrative_charge" class="flex justify-between border-t border-green-300 pt-2 mt-2">
+                  <span class="font-semibold">Cargo administrativo:</span>
+                  <span class="font-semibold">Q {{ approvalForm().administrative_charge_amount.toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
+            <button
+              (click)="closeApprovalForm()"
+              [disabled]="processing()"
+              class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 font-medium hover:bg-gray-100 disabled:opacity-50 transition">
+              Cancelar
+            </button>
+            <button
+              (click)="confirmApproval()"
+              [disabled]="processing() || !isApprovalFormValid()"
+              class="flex-1 inline-flex items-center justify-center rounded-md bg-green-600 text-white px-4 py-2 font-semibold hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none transition">
+              <svg *ngIf="!processing()" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <svg *ngIf="processing()" class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {{ processing() ? 'Procesando...' : 'Aprobar Cambio' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -372,6 +501,15 @@ export class PlateChangeDetailPage implements OnInit {
   uploading = signal<boolean>(false);
   selectedFile = signal<File | null>(null);
   selectedDocumentType = signal<number | null>(null);
+  
+  // Formulario de aprobación
+  showApprovalForm = signal<boolean>(false);
+  approvalForm = signal({
+    review_notes: '',
+    apply_administrative_charge: false,
+    administrative_charge_amount: 0,
+    administrative_charge_reason: ''
+  });
 
   // Tipos de documentos según la base de datos
   documentTypes: DocumentType[] = [
@@ -408,26 +546,58 @@ export class PlateChangeDetailPage implements OnInit {
     }
   }
 
-  async approvePlateChange(): Promise<void> {
-    const additionalNotes = prompt('Notas adicionales (opcional):');
-    
-    if (additionalNotes === null) {
-      // Usuario canceló
-      return;
-    }
+  openApprovalForm(): void {
+    this.approvalForm.set({
+      review_notes: '',
+      apply_administrative_charge: false,
+      administrative_charge_amount: 0,
+      administrative_charge_reason: ''
+    });
+    this.showApprovalForm.set(true);
+  }
 
-    if (!confirm('¿Está seguro que desea aprobar esta solicitud?')) {
+  closeApprovalForm(): void {
+    if (!this.processing()) {
+      this.showApprovalForm.set(false);
+    }
+  }
+
+  isApprovalFormValid(): boolean {
+    const form = this.approvalForm();
+    if (!form.apply_administrative_charge) {
+      return true; // Si no se aplica cargo, es válido
+    }
+    // Si se aplica cargo, validar campos requeridos
+    return form.administrative_charge_amount > 0 && 
+           form.administrative_charge_reason.trim() !== '';
+  }
+
+  async confirmApproval(): Promise<void> {
+    if (!this.isApprovalFormValid()) {
       return;
     }
 
     this.processing.set(true);
     try {
-      const reviewNotes = additionalNotes.trim() !== '' 
-        ? additionalNotes.trim()
-        : 'Aprobado desde el panel de backoffice. Documentación verificada y aprobada.';
-      
-      const updated = await this.plateChangeService.approvePlateChange(this.plateChange()!.id, reviewNotes).toPromise();
+      const form = this.approvalForm();
+      const request: any = {
+        review_notes: form.review_notes.trim() || undefined,
+        apply_administrative_charge: form.apply_administrative_charge
+      };
+
+      // Solo incluir campos de cargo si está activado
+      if (form.apply_administrative_charge) {
+        request.administrative_charge_amount = form.administrative_charge_amount;
+        request.administrative_charge_reason = form.administrative_charge_reason.trim();
+      }
+
+      const updated = await this.plateChangeService.approvePlateChange(
+        this.plateChange()!.id,
+        request
+      ).toPromise();
+
       this.plateChange.set(updated || null);
+      this.showApprovalForm.set(false);
       this.showSuccess('Solicitud aprobada exitosamente');
     } catch (err: any) {
       alert(err?.error?.message || 'Error al aprobar la solicitud');
