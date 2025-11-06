@@ -1,0 +1,497 @@
+<div class="p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Gestión de Tarifas</h1>
+      <p class="text-sm text-gray-600 mt-1">
+        Administra las tarifas base y personalizadas por sucursal
+      </p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center items-center h-64">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  } @else {
+    <!-- Cards de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+        <p class="text-sm text-gray-600 mb-1">Tarifa Base Actual</p>
+        <p class="text-2xl font-bold text-gray-900">
+          Q{{ currentBaseRate()?.amount_per_hour | number:'1.2-2' }}
+        </p>
+        <p class="text-xs text-gray-500 mt-1">Por hora</p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+        <p class="text-sm text-gray-600 mb-1">Sucursales Activas</p>
+        <p class="text-2xl font-bold text-gray-900">{{ activeBranchesCount() }}</p>
+        <p class="text-xs text-gray-500 mt-1">Total</p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
+        <p class="text-sm text-gray-600 mb-1">Con Tarifa Personalizada</p>
+        <p class="text-2xl font-bold text-gray-900">{{ branchesWithCustomRate() }}</p>
+        <p class="text-xs text-gray-500 mt-1">Sucursales</p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
+        <p class="text-sm text-gray-600 mb-1">Usando Tarifa Base</p>
+        <p class="text-2xl font-bold text-gray-900">{{ branchesUsingBaseRate() }}</p>
+        <p class="text-xs text-gray-500 mt-1">Sucursales</p>
+      </div>
+    </div>
+
+    <!-- Tarifa Base -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Tarifa Base</h2>
+          <p class="text-sm text-gray-600">
+            Esta tarifa se aplica a todas las sucursales que no tengan una tarifa personalizada
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button
+            (click)="openHistoryModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+            📜 Ver Historial
+          </button>
+          <button
+            (click)="openUpdateBaseRateModal()"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+            ✏️ Actualizar Tarifa Base
+          </button>
+        </div>
+      </div>
+
+      @if (currentBaseRate()) {
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-blue-50 p-4 rounded-lg">
+          <div>
+            <p class="text-xs text-gray-600 mb-1">Tarifa por Hora</p>
+            <p class="text-2xl font-bold text-blue-600">
+              Q{{ currentBaseRate()!.amount_per_hour | number:'1.2-2' }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-600 mb-1">Fecha de Inicio</p>
+            <p class="text-sm font-medium text-gray-900">
+              {{ formatDate(currentBaseRate()!.start_date) }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-600 mb-1">Estado</p>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  [class.bg-green-100]="currentBaseRate()!.is_active"
+                  [class.text-green-800]="currentBaseRate()!.is_active"
+                  [class.bg-gray-100]="!currentBaseRate()!.is_active"
+                  [class.text-gray-800]="!currentBaseRate()!.is_active">
+              {{ currentBaseRate()!.is_active ? 'Activa' : 'Inactiva' }}
+            </span>
+          </div>
+        </div>
+      } @else {
+        <div class="text-center py-8 text-gray-500">
+          No hay tarifa base configurada
+        </div>
+      }
+    </div>
+
+    <!-- Tarifas por Sucursal -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Tarifas por Sucursal</h2>
+        <p class="text-sm text-gray-600">
+          Configura tarifas personalizadas para sucursales específicas
+        </p>
+      </div>
+
+      @if (branchRates().length > 0) {
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sucursal
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tarifa Efectiva
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Origen
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              @for (branch of branchRates(); track branch.branch_id) {
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">{{ branch.branch_name }}</div>
+                    <div class="text-xs text-gray-500">ID: {{ branch.branch_id }}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">
+                      Q{{ getEffectiveRate(branch) | number:'1.2-2' }} / hora
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    @if (branch.rate_per_hour === null) {
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        📍 Tarifa Base
+                      </span>
+                    } @else {
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        🎯 Personalizada
+                      </span>
+                    }
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          [class.bg-green-100]="branch.is_active"
+                          [class.text-green-800]="branch.is_active"
+                          [class.bg-red-100]="!branch.is_active"
+                          [class.text-red-800]="!branch.is_active">
+                      {{ branch.is_active ? 'Activa' : 'Inactiva' }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      (click)="openUpdateBranchRateModal(branch)"
+                      class="text-blue-600 hover:text-blue-900 mr-3">
+                      @if (branch.rate_per_hour === null) {
+                        Asignar
+                      } @else {
+                        Editar
+                      }
+                    </button>
+                    @if (branch.rate_per_hour !== null) {
+                      <button
+                        (click)="confirmDeleteBranchRate(branch)"
+                        class="text-red-600 hover:text-red-900">
+                        Eliminar
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="text-center py-8 text-gray-500">
+          No hay sucursales registradas
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal: Actualizar Tarifa Base -->
+  @if (activeModal() === 'update-base') {
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
+         (click)="closeModal()">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+           (click)="$event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Actualizar Tarifa Base</h3>
+        </div>
+        
+        <form [formGroup]="baseRateForm" (ngSubmit)="submitBaseRateForm()" class="p-6 space-y-4">
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                  <strong>Advertencia:</strong> Esta acción creará una nueva tarifa base y desactivará la anterior.
+                  Todas las sucursales que usan la tarifa base se verán afectadas.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="amount_per_hour" class="block text-sm font-medium text-gray-700 mb-1">
+              Nueva Tarifa por Hora (Q)
+            </label>
+            <input
+              type="number"
+              id="amount_per_hour"
+              formControlName="amount_per_hour"
+              step="0.01"
+              min="1"
+              max="1000"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="0.00">
+            @if (baseRateForm.get('amount_per_hour')?.touched && baseRateForm.get('amount_per_hour')?.errors) {
+              <p class="mt-1 text-sm text-red-600">
+                @if (baseRateForm.get('amount_per_hour')?.errors?.['required']) {
+                  La tarifa es requerida
+                }
+                @if (baseRateForm.get('amount_per_hour')?.errors?.['min']) {
+                  La tarifa debe ser mayor a Q1.00
+                }
+                @if (baseRateForm.get('amount_per_hour')?.errors?.['max']) {
+                  La tarifa debe ser menor a Q1,000.00
+                }
+              </p>
+            }
+          </div>
+
+          <div class="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              (click)="closeModal()"
+              [disabled]="submitting()"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="baseRateForm.invalid || submitting()"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              @if (submitting()) {
+                <span class="flex items-center">
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Actualizando...
+                </span>
+              } @else {
+                Actualizar Tarifa
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Historial de Tarifas -->
+  @if (activeModal() === 'history') {
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
+         (click)="closeModal()">
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col"
+           (click)="$event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Historial de Tarifas Base</h3>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-6">
+          @if (loading()) {
+            <div class="flex justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          } @else if (rateHistory().length > 0) {
+            <div class="space-y-4">
+              @for (rate of rateHistory(); track rate.id) {
+                <div class="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <p class="font-semibold text-lg text-gray-900">
+                        Q{{ rate.amount_per_hour | number:'1.2-2' }} / hora
+                      </p>
+                      <p class="text-sm text-gray-600 mt-1">
+                        <strong>Inicio:</strong> {{ formatDate(rate.start_date) }}
+                      </p>
+                      @if (rate.end_date) {
+                        <p class="text-sm text-gray-600">
+                          <strong>Fin:</strong> {{ formatDate(rate.end_date) }}
+                        </p>
+                      }
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          [class.bg-green-100]="rate.is_active"
+                          [class.text-green-800]="rate.is_active"
+                          [class.bg-gray-100]="!rate.is_active"
+                          [class.text-gray-800]="!rate.is_active">
+                      {{ rate.is_active ? 'Activa' : 'Histórica' }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="text-center text-gray-500 py-8">No hay historial disponible</p>
+          }
+        </div>
+
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+          <button
+            (click)="closeModal()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Asignar/Actualizar Tarifa de Sucursal -->
+  @if (activeModal() === 'update-branch' && selectedBranch()) {
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
+         (click)="closeModal()">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+           (click)="$event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">
+            @if (selectedBranch()!.rate_per_hour === null) {
+              Asignar Tarifa a Sucursal
+            } @else {
+              Actualizar Tarifa de Sucursal
+            }
+          </h3>
+          <p class="text-sm text-gray-600 mt-1">{{ selectedBranch()!.branch_name }}</p>
+        </div>
+        
+        <form [formGroup]="branchRateForm" (ngSubmit)="submitBranchRateForm()" class="p-6 space-y-4">
+          <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <p class="text-sm text-blue-700">
+              @if (selectedBranch()!.rate_per_hour === null) {
+                <strong>Tarifa actual:</strong> Q{{ currentBaseRate()?.amount_per_hour | number:'1.2-2' }} (Base)
+              } @else {
+                <strong>Tarifa actual:</strong> Q{{ selectedBranch()!.rate_per_hour | number:'1.2-2' }} (Personalizada)
+              }
+            </p>
+          </div>
+
+          <div>
+            <label for="rate_per_hour" class="block text-sm font-medium text-gray-700 mb-1">
+              Nueva Tarifa por Hora (Q)
+            </label>
+            <input
+              type="number"
+              id="rate_per_hour"
+              formControlName="rate_per_hour"
+              step="0.01"
+              min="1"
+              max="1000"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="0.00">
+            @if (branchRateForm.get('rate_per_hour')?.touched && branchRateForm.get('rate_per_hour')?.errors) {
+              <p class="mt-1 text-sm text-red-600">
+                @if (branchRateForm.get('rate_per_hour')?.errors?.['required']) {
+                  La tarifa es requerida
+                }
+                @if (branchRateForm.get('rate_per_hour')?.errors?.['min']) {
+                  La tarifa debe ser mayor a Q1.00
+                }
+                @if (branchRateForm.get('rate_per_hour')?.errors?.['max']) {
+                  La tarifa debe ser menor a Q1,000.00
+                }
+              </p>
+            }
+            <p class="mt-1 text-xs text-gray-500">
+              Esta tarifa solo se aplicará a esta sucursal
+            </p>
+          </div>
+
+          <div class="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              (click)="closeModal()"
+              [disabled]="submitting()"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="branchRateForm.invalid || submitting()"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              @if (submitting()) {
+                <span class="flex items-center">
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Guardando...
+                </span>
+              } @else {
+                @if (selectedBranch()!.rate_per_hour === null) {
+                  Asignar Tarifa
+                } @else {
+                  Actualizar Tarifa
+                }
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Confirmar Eliminación -->
+  @if (activeModal() === 'delete-branch' && selectedBranch()) {
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50"
+         (click)="closeModal()">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+           (click)="$event.stopPropagation()">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-red-600">Eliminar Tarifa Personalizada</h3>
+        </div>
+        
+        <div class="p-6">
+          <div class="flex items-start mb-4">
+            <div class="flex-shrink-0">
+              <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-gray-700 mb-3">
+                ¿Estás seguro de eliminar la tarifa personalizada de 
+                <strong>{{ selectedBranch()!.branch_name }}</strong>?
+              </p>
+              <div class="bg-gray-50 border-l-4 border-gray-400 p-3 mb-3">
+                <p class="text-sm text-gray-700">
+                  <strong>Tarifa actual:</strong> Q{{ selectedBranch()!.rate_per_hour | number:'1.2-2' }} / hora
+                </p>
+                <p class="text-sm text-gray-700 mt-1">
+                  <strong>Nueva tarifa:</strong> Q{{ currentBaseRate()?.amount_per_hour | number:'1.2-2' }} / hora (Base)
+                </p>
+              </div>
+              <p class="text-xs text-gray-600">
+                La sucursal volverá a usar la tarifa base global después de esta acción.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <button
+              (click)="closeModal()"
+              [disabled]="submitting()"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50">
+              Cancelar
+            </button>
+            <button
+              (click)="deleteBranchRate()"
+              [disabled]="submitting()"
+              class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              @if (submitting()) {
+                <span class="flex items-center">
+                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Eliminando...
+                </span>
+              } @else {
+                Eliminar Tarifa
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

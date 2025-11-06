@@ -1,0 +1,545 @@
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import {
+  FleetService,
+  FleetResponse,
+  CreateFleetRequest,
+  UpdateFleetRequest,
+  FleetVehicleResponse,
+  AddVehicleToFleetRequest,
+  FleetConsumptionResponse,
+  UpdateFleetDiscountsRequest
+} from './services/fleet.service';
+import { NotificationService } from '../shared/services/notification.service';
+
+type ModalType = 'fleet' | 'vehicle' | 'discount' | 'consumption' | null;
+
+@Component({
+  selector: 'app-fleets-management',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  template: `
+    <div class="space-y-6">
+      <!-- Header -->
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Gestión de Flotillas</h1>
+          <p class="text-gray-600 mt-1">Administra empresas flotilleras y sus vehículos</p>
+        </div>
+        <button
+          (click)="openCreateModal()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <i class="fas fa-plus mr-2"></i>Nueva Flotilla
+        </button>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white p-4 rounded-lg shadow-sm border">
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o NIT..."
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="onSearch()">
+          </div>
+          <select
+            class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            [(ngModel)]="filterActive"
+            (ngModelChange)="loadFleets()">
+            <option [ngValue]="undefined">Todos los estados</option>
+            <option [ngValue]="true">Activas</option>
+            <option [ngValue]="false">Inactivas</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Fleets Table -->
+      <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+        @if (loading()) {
+          <div class="flex justify-center items-center p-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        } @else if (fleets().length === 0) {
+          <div class="text-center py-12">
+            <i class="fas fa-truck text-gray-400 text-5xl mb-4"></i>
+            <p class="text-gray-500">No hay flotillas registradas</p>
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empresa</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">NIT</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contacto</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descuento</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículos</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                @for (fleet of fleets(); track fleet.id) {
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">{{ fleet.name }}</div>
+                      <div class="text-sm text-gray-500">{{ fleet.corporate_email }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {{ fleet.tax_id }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm text-gray-900">{{ fleet.contact_name || 'N/A' }}</div>
+                      <div class="text-sm text-gray-500">{{ fleet.phone || 'Sin teléfono' }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {{ fleet.corporate_discount_percentage }}%
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-sm font-semibold text-blue-600">
+                        {{ fleet.active_vehicles_count }} / {{ fleet.plate_limit }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span [class]="fleet.is_active 
+                        ? 'px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800'
+                        : 'px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800'">
+                        {{ fleet.is_active ? 'Activa' : 'Inactiva' }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      <div class="flex gap-2">
+                        <button
+                          (click)="viewFleet(fleet)"
+                          class="text-blue-600 hover:text-blue-900"
+                          title="Ver detalles">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                        <button
+                          (click)="openEditModal(fleet)"
+                          class="text-yellow-600 hover:text-yellow-900"
+                          title="Editar">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button
+                          (click)="viewVehicles(fleet)"
+                          class="text-purple-600 hover:text-purple-900"
+                          title="Ver vehículos">
+                          <i class="fas fa-car"></i>
+                        </button>
+                        <button
+                          (click)="viewConsumption(fleet)"
+                          class="text-green-600 hover:text-green-900"
+                          title="Ver consumo">
+                          <i class="fas fa-chart-line"></i>
+                        </button>
+                        <button
+                          (click)="deleteFleet(fleet)"
+                          [disabled]="fleet.active_vehicles_count > 0"
+                          [class.opacity-50]="fleet.active_vehicles_count > 0"
+                          [class.cursor-not-allowed]="fleet.active_vehicles_count > 0"
+                          class="text-red-600 hover:text-red-900"
+                          [title]="fleet.active_vehicles_count > 0 
+                            ? 'No se puede eliminar: tiene vehículos activos' 
+                            : 'Eliminar'">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          @if (totalPages() > 1) {
+            <div class="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
+              <div class="text-sm text-gray-700">
+                Mostrando {{ fleets().length }} de {{ totalElements() }} flotillas
+              </div>
+              <div class="flex gap-2">
+                <button
+                  (click)="previousPage()"
+                  [disabled]="currentPage() === 0"
+                  class="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100">
+                  Anterior
+                </button>
+                <span class="px-3 py-1">
+                  Página {{ currentPage() + 1 }} de {{ totalPages() }}
+                </span>
+                <button
+                  (click)="nextPage()"
+                  [disabled]="currentPage() >= totalPages() - 1"
+                  class="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100">
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Create/Edit Modal -->
+      @if (showModal()) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4">
+              {{ editingFleet() ? 'Editar Flotilla' : 'Nueva Flotilla' }}
+            </h2>
+
+            <form [formGroup]="fleetForm" (ngSubmit)="submitForm()" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre de la Empresa *
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="name"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [class.border-red-500]="fleetForm.get('name')?.invalid && fleetForm.get('name')?.touched">
+                  @if (fleetForm.get('name')?.invalid && fleetForm.get('name')?.touched) {
+                    <p class="text-red-500 text-sm mt-1">El nombre es requerido</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    NIT *
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="tax_id"
+                    [readonly]="editingFleet()"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [class.border-red-500]="fleetForm.get('tax_id')?.invalid && fleetForm.get('tax_id')?.touched"
+                    [class.bg-gray-100]="editingFleet()">
+                  @if (fleetForm.get('tax_id')?.invalid && fleetForm.get('tax_id')?.touched) {
+                    <p class="text-red-500 text-sm mt-1">El NIT es requerido</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Email Corporativo *
+                  </label>
+                  <input
+                    type="email"
+                    formControlName="corporate_email"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [class.border-red-500]="fleetForm.get('corporate_email')?.invalid && fleetForm.get('corporate_email')?.touched">
+                  @if (fleetForm.get('corporate_email')?.invalid && fleetForm.get('corporate_email')?.touched) {
+                    <p class="text-red-500 text-sm mt-1">Email válido requerido</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre de Contacto
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="contact_name"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Teléfono
+                  </label>
+                  <input
+                    type="text"
+                    formControlName="phone"
+                    placeholder="8-15 dígitos"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [class.border-red-500]="fleetForm.get('phone')?.invalid && fleetForm.get('phone')?.touched">
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Descuento Corporativo (%) *
+                  </label>
+                  <input
+                    type="number"
+                    formControlName="corporate_discount_percentage"
+                    min="0"
+                    max="10"
+                    step="0.01"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [class.border-red-500]="fleetForm.get('corporate_discount_percentage')?.invalid && fleetForm.get('corporate_discount_percentage')?.touched">
+                  @if (fleetForm.get('corporate_discount_percentage')?.invalid && fleetForm.get('corporate_discount_percentage')?.touched) {
+                    <p class="text-red-500 text-sm mt-1">Debe estar entre 0 y 10</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Límite de Placas *
+                  </label>
+                  <input
+                    type="number"
+                    formControlName="plate_limit"
+                    min="1"
+                    max="50"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [class.border-red-500]="fleetForm.get('plate_limit')?.invalid && fleetForm.get('plate_limit')?.touched">
+                  @if (fleetForm.get('plate_limit')?.invalid && fleetForm.get('plate_limit')?.touched) {
+                    <p class="text-red-500 text-sm mt-1">Debe estar entre 1 y 50</p>
+                  }
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Período de Facturación *
+                  </label>
+                  <select
+                    formControlName="billing_period"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="DAILY">Diario</option>
+                    <option value="WEEKLY">Semanal</option>
+                    <option value="MONTHLY">Mensual</option>
+                    <option value="ANNUAL">Anual</option>
+                  </select>
+                </div>
+
+                @if (editingFleet()) {
+                  <div class="col-span-2">
+                    <label class="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        formControlName="is_active"
+                        class="w-4 h-4 text-blue-600 rounded">
+                      <span class="text-sm font-medium text-gray-700">Flotilla Activa</span>
+                    </label>
+                  </div>
+                }
+              </div>
+
+              <div class="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  (click)="closeModal()"
+                  class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  [disabled]="fleetForm.invalid || submitting()"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {{ submitting() ? 'Guardando...' : editingFleet() ? 'Actualizar' : 'Crear' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+    </div>
+  `
+})
+export class FleetsManagementComponent implements OnInit {
+  private fleetService = inject(FleetService);
+  private fb = inject(FormBuilder);
+
+  // State signals
+  fleets = signal<FleetResponse[]>([]);
+  loading = signal(false);
+  showModal = signal(false);
+  submitting = signal(false);
+  editingFleet = signal<FleetResponse | null>(null);
+
+  // Pagination
+  currentPage = signal(0);
+  totalPages = signal(0);
+  totalElements = signal(0);
+  pageSize = signal(10);
+
+  // Filters
+  searchTerm = '';
+  filterActive?: boolean;
+
+  // Form
+  fleetForm = this.fb.group({
+    name: ['', [Validators.required, Validators.maxLength(200)]],
+    tax_id: ['', [Validators.required, Validators.maxLength(50)]],
+    contact_name: ['', Validators.maxLength(200)],
+    corporate_email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
+    phone: ['', [Validators.pattern(/^[0-9]{8,15}$/)]],
+    corporate_discount_percentage: [0, [Validators.required, Validators.min(0), Validators.max(10)]],
+    plate_limit: [10, [Validators.required, Validators.min(1), Validators.max(50)]],
+    billing_period: ['MONTHLY', Validators.required],
+    is_active: [true]
+  });
+
+  ngOnInit() {
+    this.loadFleets();
+  }
+
+  loadFleets() {
+    this.loading.set(true);
+    this.fleetService.listFleets(this.currentPage(), this.pageSize(), this.filterActive).subscribe({
+      next: (response) => {
+        this.fleets.set(response.content);
+        this.totalPages.set(response.totalPages);
+        this.totalElements.set(response.totalElements);
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading fleets:', error);
+        alert('Error al cargar las flotillas');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  onSearch() {
+    // TODO: Implement search functionality when backend supports it
+    this.loadFleets();
+  }
+
+  openCreateModal() {
+    this.editingFleet.set(null);
+    this.fleetForm.reset({
+      corporate_discount_percentage: 0,
+      plate_limit: 10,
+      billing_period: 'MONTHLY',
+      is_active: true
+    });
+    this.fleetForm.get('tax_id')?.enable();
+    this.showModal.set(true);
+  }
+
+  openEditModal(fleet: FleetResponse) {
+    this.editingFleet.set(fleet);
+    this.fleetForm.patchValue({
+      name: fleet.name,
+      tax_id: fleet.tax_id,
+      contact_name: fleet.contact_name,
+      corporate_email: fleet.corporate_email,
+      phone: fleet.phone,
+      corporate_discount_percentage: fleet.corporate_discount_percentage,
+      plate_limit: fleet.plate_limit,
+      billing_period: fleet.billing_period,
+      is_active: fleet.is_active
+    });
+    this.fleetForm.get('tax_id')?.disable();
+    this.showModal.set(true);
+  }
+
+  closeModal() {
+    this.showModal.set(false);
+    this.editingFleet.set(null);
+    this.fleetForm.reset();
+  }
+
+  submitForm() {
+    if (this.fleetForm.invalid) return;
+
+    this.submitting.set(true);
+    const formValue = this.fleetForm.getRawValue();
+
+    if (this.editingFleet()) {
+      const updateRequest: UpdateFleetRequest = {
+        name: formValue.name || undefined,
+        contact_name: formValue.contact_name || undefined,
+        corporate_email: formValue.corporate_email || undefined,
+        phone: formValue.phone || undefined,
+        corporate_discount_percentage: formValue.corporate_discount_percentage || undefined,
+        plate_limit: formValue.plate_limit || undefined,
+        billing_period: formValue.billing_period as any,
+        is_active: formValue.is_active || undefined
+      };
+
+      this.fleetService.updateFleet(this.editingFleet()!.id, updateRequest).subscribe({
+        next: () => {
+          alert('Flotilla actualizada exitosamente');
+          this.closeModal();
+          this.loadFleets();
+          this.submitting.set(false);
+        },
+        error: (error) => {
+          console.error('Error updating fleet:', error);
+          alert(error.error?.message || 'Error al actualizar la flotilla');
+          this.submitting.set(false);
+        }
+      });
+    } else {
+      const createRequest: CreateFleetRequest = {
+        name: formValue.name!,
+        tax_id: formValue.tax_id!,
+        contact_name: formValue.contact_name || undefined,
+        corporate_email: formValue.corporate_email!,
+        phone: formValue.phone || undefined,
+        corporate_discount_percentage: formValue.corporate_discount_percentage!,
+        plate_limit: formValue.plate_limit!,
+        billing_period: formValue.billing_period as any
+      };
+
+      this.fleetService.createFleet(createRequest).subscribe({
+        next: () => {
+          alert('Flotilla creada exitosamente');
+          this.closeModal();
+          this.loadFleets();
+          this.submitting.set(false);
+        },
+        error: (error) => {
+          console.error('Error creating fleet:', error);
+          alert(error.error?.message || 'Error al crear la flotilla');
+          this.submitting.set(false);
+        }
+      });
+    }
+  }
+
+  viewFleet(fleet: FleetResponse) {
+    alert(`Detalles de ${fleet.name}:\n\nNIT: ${fleet.tax_id}\nVehículos activos: ${fleet.active_vehicles_count}/${fleet.plate_limit}\nDescuento: ${fleet.corporate_discount_percentage}%\nPeriodo: ${fleet.billing_period}\nMeses sin pagar: ${fleet.months_unpaid}`);
+  }
+
+  viewVehicles(fleet: FleetResponse) {
+    // TODO: Navigate to vehicles management for this fleet
+    alert(`Ver vehículos de ${fleet.name} - Funcionalidad próximamente`);
+  }
+
+  viewConsumption(fleet: FleetResponse) {
+    // TODO: Navigate to consumption stats for this fleet
+    alert(`Ver consumo de ${fleet.name} - Funcionalidad próximamente`);
+  }
+
+  deleteFleet(fleet: FleetResponse) {
+    if (fleet.active_vehicles_count > 0) {
+      alert('No se puede eliminar una flotilla con vehículos activos');
+      return;
+    }
+
+    if (confirm(`¿Está seguro de eliminar la flotilla "${fleet.name}"?`)) {
+      this.fleetService.deleteFleet(fleet.id).subscribe({
+        next: () => {
+          alert('Flotilla eliminada exitosamente');
+          this.loadFleets();
+        },
+        error: (error) => {
+          console.error('Error deleting fleet:', error);
+          alert(error.error?.message || 'Error al eliminar la flotilla');
+        }
+      });
+    }
+  }
+
+  previousPage() {
+    if (this.currentPage() > 0) {
+      this.currentPage.set(this.currentPage() - 1);
+      this.loadFleets();
+    }
+  }
+
+  nextPage() {
+    if (this.currentPage() < this.totalPages() - 1) {
+      this.currentPage.set(this.currentPage() + 1);
+      this.loadFleets();
+    }
+  }
+}

@@ -133,6 +133,11 @@ export interface ConfigureBenefitRequest {
   settlement_period: string;
 }
 
+export interface UpdateBenefitRequest {
+  benefit_type: string;
+  settlement_period: string;
+}
+
 // ==================== DTOs para Planes de Suscripción ====================
 export interface SubscriptionPlanResponse {
   id: number;
@@ -400,6 +405,26 @@ export class AdminService {
   async getCommerceBenefits(commerceId: number): Promise<BenefitResponse[]> {
     return await firstValueFrom(
       this.http.get<BenefitResponse[]>(`${API_BASE}/commerces/${commerceId}/benefits`)
+    );
+  }
+
+  /**
+   * Actualizar beneficio de comercio
+   * PUT /commerces/:commerceId/benefits/:benefitId
+   */
+  async updateBenefit(commerceId: number, benefitId: number, request: UpdateBenefitRequest): Promise<BenefitResponse> {
+    return await firstValueFrom(
+      this.http.put<BenefitResponse>(`${API_BASE}/commerces/${commerceId}/benefits/${benefitId}`, request)
+    );
+  }
+
+  /**
+   * Eliminar beneficio de comercio
+   * DELETE /commerces/:commerceId/benefits/:benefitId
+   */
+  async deleteBenefit(commerceId: number, benefitId: number): Promise<void> {
+    return await firstValueFrom(
+      this.http.delete<void>(`${API_BASE}/commerces/${commerceId}/benefits/${benefitId}`)
     );
   }
 

@@ -27,7 +27,7 @@ export const ADMIN_ROUTES: Routes = [
     loadComponent: () => import('./rates-management.component').then((m) => m.RatesManagementComponent),
   },
   {
-    path: 'discount-audit',
-    loadComponent: () => import('./discount-audit.component').then((m) => m.DiscountAuditComponent),
+    path: 'fleets',
+    loadComponent: () => import('./fleets-management.component').then((m) => m.FleetsManagementComponent),
   },
 ];

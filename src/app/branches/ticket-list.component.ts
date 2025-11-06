@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TicketService, TicketResponse } from './services/ticket.service';
 import { NotificationService } from '../shared/services/notification.service';
+import { AdminService, CommerceResponse } from '../admin/services/admin.service';
 
 /**
  * Componente para ver la lista de tickets activos y buscar tickets
@@ -195,11 +196,19 @@ import { NotificationService } from '../shared/services/notification.service';
                         }
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-center">
-                        <button 
-                          (click)="viewDetails(ticket)"
-                          class="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                          Ver Detalles
-                        </button>
+                        <div class="flex items-center justify-center gap-2">
+                          <button 
+                            (click)="viewDetails(ticket)"
+                            class="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                            Ver Detalles
+                          </button>
+                          <button 
+                            (click)="openApplyBenefitModal(ticket)"
+                            class="text-purple-600 hover:text-purple-700 font-medium text-sm"
+                            title="Aplicar horas gratis de comercio afiliado">
+                            🎁 Beneficio
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   }
@@ -301,12 +310,119 @@ import { NotificationService } from '../shared/services/notification.service';
           </div>
         }
 
+        <!-- Modal: Aplicar Beneficio de Comercio -->
+        @if (showApplyBenefitModal() && ticketForBenefit()) {
+          <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+               (click)="closeApplyBenefitModal()">
+            <div class="bg-white rounded-xl max-w-md w-full" (click)="$event.stopPropagation()">
+              <div class="p-6 border-b">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-xl font-bold text-gray-900">🎁 Aplicar Beneficio de Comercio</h3>
+                  <button (click)="closeApplyBenefitModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-6 space-y-4">
+                <!-- Info del Ticket -->
+                <div class="bg-blue-50 rounded-lg p-4 space-y-2">
+                  <div class="flex justify-between">
+                    <span class="text-sm font-medium text-gray-600">Folio:</span>
+                    <span class="font-bold text-gray-900">{{ ticketForBenefit()!.folio }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-sm font-medium text-gray-600">Placa:</span>
+                    <span class="font-bold text-gray-900">{{ ticketForBenefit()!.licensePlate }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-sm font-medium text-gray-600">Vehículo:</span>
+                    <span class="text-gray-900">{{ ticketForBenefit()!.vehicleTypeName }}</span>
+                  </div>
+                </div>
+
+                <!-- Seleccionar Comercio -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Comercio Afiliado <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    [(ngModel)]="selectedCommerceId"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <option [value]="null">Seleccione un comercio</option>
+                    @for (commerce of commerces(); track commerce.id) {
+                      <option [value]="commerce.id">
+                        {{ commerce.name }} ({{ commerce.tax_id }})
+                      </option>
+                    }
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Solo se muestran comercios activos con beneficios configurados
+                  </p>
+                </div>
+
+                <!-- Horas a Otorgar -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Horas Gratis <span class="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    [(ngModel)]="hoursToGrant"
+                    min="0.5"
+                    step="0.5"
+                    max="24"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Ej: 2">
+                  <p class="text-xs text-gray-500 mt-1">
+                    Mínimo 0.5 horas (30 min), máximo 24 horas
+                  </p>
+                </div>
+
+                <div class="bg-purple-50 border-l-4 border-purple-500 p-3 rounded">
+                  <p class="text-sm text-purple-800">
+                    <strong>Nota:</strong> Las horas gratis se registrarán para liquidación posterior según el período configurado (Ticket o Mensual)
+                  </p>
+                </div>
+              </div>
+
+              <div class="p-6 border-t bg-gray-50 flex gap-3">
+                <button 
+                  (click)="closeApplyBenefitModal()"
+                  [disabled]="applyingBenefit()"
+                  class="flex-1 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50">
+                  Cancelar
+                </button>
+                <button 
+                  (click)="applyBenefit()"
+                  [disabled]="!selectedCommerceId() || hoursToGrant() <= 0 || applyingBenefit()"
+                  class="flex-1 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  @if (applyingBenefit()) {
+                    <span class="flex items-center justify-center gap-2">
+                      <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Aplicando...
+                    </span>
+                  } @else {
+                    Aplicar Beneficio
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+
       </div>
     </div>
   `
 })
 export class TicketListComponent implements OnInit {
   private ticketService = inject(TicketService);
+  private adminService = inject(AdminService);
   private notification = inject(NotificationService);
   router = inject(Router);
 
@@ -316,6 +432,14 @@ export class TicketListComponent implements OnInit {
   filteredTickets = signal<TicketResponse[]>([]);
   selectedTicket = signal<TicketResponse | null>(null);
   searchQuery = '';
+
+  // Apply Benefit Modal
+  showApplyBenefitModal = signal(false);
+  ticketForBenefit = signal<TicketResponse | null>(null);
+  commerces = signal<CommerceResponse[]>([]);
+  selectedCommerceId = signal<number | null>(null);
+  hoursToGrant = signal<number>(1);
+  applyingBenefit = signal(false);
 
   ngOnInit() {
     this.loadTickets();
@@ -391,5 +515,69 @@ export class TicketListComponent implements OnInit {
       return 'px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium';
     }
     return 'px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium';
+  }
+
+  // ============================================================================
+  // Apply Benefit Methods
+  // ============================================================================
+
+  async openApplyBenefitModal(ticket: TicketResponse) {
+    this.ticketForBenefit.set(ticket);
+    this.selectedCommerceId.set(null);
+    this.hoursToGrant.set(1);
+    
+    // Load commerces
+    try {
+      const response = await this.adminService.listCommerces(0, 100);
+      this.commerces.set(response.content.filter(c => c.is_active));
+      this.showApplyBenefitModal.set(true);
+    } catch (error) {
+      console.error('Error loading commerces:', error);
+      this.notification.error('Error al cargar la lista de comercios');
+    }
+  }
+
+  closeApplyBenefitModal() {
+    this.showApplyBenefitModal.set(false);
+    this.ticketForBenefit.set(null);
+    this.selectedCommerceId.set(null);
+    this.hoursToGrant.set(1);
+  }
+
+  async applyBenefit() {
+    if (!this.selectedCommerceId() || !this.ticketForBenefit()) {
+      this.notification.warning('Debe seleccionar un comercio');
+      return;
+    }
+
+    if (this.hoursToGrant() <= 0) {
+      this.notification.warning('Las horas deben ser mayor a 0');
+      return;
+    }
+
+    this.applyingBenefit.set(true);
+    try {
+      const response = await this.ticketService.applyBenefit(
+        this.ticketForBenefit()!.id,
+        {
+          businessId: this.selectedCommerceId()!,
+          grantedHours: this.hoursToGrant()
+        }
+      );
+
+      this.notification.success(
+        `Beneficio aplicado: ${response.grantedHours} horas gratis de ${response.businessName}`
+      );
+      
+      this.closeApplyBenefitModal();
+      await this.loadTickets();
+    } catch (error: any) {
+      console.error('Error applying benefit:', error);
+      this.notification.error(
+        error?.error?.message || 'Error al aplicar el beneficio'
+      );
+    } finally {
+      this.applyingBenefit.set(false);
+    }
   }
 }

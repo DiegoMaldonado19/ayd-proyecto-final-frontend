@@ -1,0 +1,744 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Gestión de Flotillas</h1>
+      <p class="text-gray-600 mt-1">Administra empresas flotilleras y sus vehículos</p>
+    </div>
+    <button
+      (click)="openCreateFleetModal()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+      ➕
+      <span>Nueva Flotilla</span>
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white p-4 rounded-lg shadow-sm border">
+    <div class="flex gap-4">
+      <select
+        class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+        [(ngModel)]="filterActive"
+        (ngModelChange)="loadFleets()">
+        <option [ngValue]="undefined">Todos los estados</option>
+        <option [ngValue]="true">Activas</option>
+        <option [ngValue]="false">Inactivas</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Fleets Table -->
+  <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+    @if (loading()) {
+      <div class="flex justify-center items-center p-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    } @else if (fleets().length === 0) {
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">🚚</div>
+        <p class="text-gray-500">No hay flotillas registradas</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empresa</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">NIT</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contacto</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descuento</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehículos</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Facturación</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            @for (fleet of fleets(); track fleet.id) {
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">{{ fleet.name }}</div>
+                  <div class="text-sm text-gray-500">{{ fleet.corporate_email }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ fleet.tax_id }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ fleet.contact_name || 'N/A' }}</div>
+                  <div class="text-sm text-gray-500">{{ fleet.phone || 'Sin teléfono' }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm font-semibold text-purple-600">
+                    {{ fleet.corporate_discount_percentage }}%
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-sm font-semibold" 
+                    [class.text-blue-600]="fleet.active_vehicles_count < fleet.plate_limit"
+                    [class.text-red-600]="fleet.active_vehicles_count >= fleet.plate_limit">
+                    {{ fleet.active_vehicles_count }} / {{ fleet.plate_limit }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="text-xs px-2 py-1 rounded-full" 
+                    [ngClass]="{
+                      'bg-green-100 text-green-800': fleet.billing_period === 'MONTHLY',
+                      'bg-blue-100 text-blue-800': fleet.billing_period === 'WEEKLY',
+                      'bg-yellow-100 text-yellow-800': fleet.billing_period === 'DAILY',
+                      'bg-purple-100 text-purple-800': fleet.billing_period === 'ANNUAL'
+                    }">
+                    {{ getBillingPeriodLabel(fleet.billing_period) }}
+                  </span>
+                  @if (fleet.months_unpaid > 0) {
+                    <span class="ml-1 text-xs px-2 py-1 rounded-full bg-red-100 text-red-800">
+                      {{ fleet.months_unpaid }} mes{{ fleet.months_unpaid > 1 ? 'es' : '' }} sin pagar
+                    </span>
+                  }
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span [class]="fleet.is_active 
+                    ? 'px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800'
+                    : 'px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800'">
+                    {{ fleet.is_active ? 'Activa' : 'Inactiva' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <div class="flex gap-2">
+                    <button
+                      (click)="openEditFleetModal(fleet)"
+                      class="px-2 py-1 text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 rounded"
+                      title="Editar">
+                      ✏️
+                    </button>
+                    <button
+                      (click)="viewVehicles(fleet)"
+                      class="px-2 py-1 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded"
+                      title="Gestionar vehículos">
+                      🚗
+                    </button>
+                    <button
+                      (click)="openDiscountModal(fleet)"
+                      class="px-2 py-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded"
+                      title="Configurar descuentos">
+                      💰
+                    </button>
+                    <button
+                      (click)="viewConsumption(fleet)"
+                      class="px-2 py-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded"
+                      title="Ver estadísticas">
+                      📊
+                    </button>
+                    <button
+                      (click)="confirmDeleteFleet(fleet)"
+                      [disabled]="fleet.active_vehicles_count > 0"
+                      [class.opacity-50]="fleet.active_vehicles_count > 0"
+                      [class.cursor-not-allowed]="fleet.active_vehicles_count > 0"
+                      class="px-2 py-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded disabled:hover:bg-transparent"
+                      [title]="fleet.active_vehicles_count > 0 
+                        ? 'No se puede eliminar: tiene vehículos activos' 
+                        : 'Eliminar'">
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
+          <div class="text-sm text-gray-700">
+            Mostrando {{ fleets().length }} de {{ totalElements() }} flotillas
+          </div>
+          <div class="flex gap-2">
+            <button
+              (click)="previousPage()"
+              [disabled]="currentPage() === 0"
+              class="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100">
+              Anterior
+            </button>
+            <span class="px-3 py-1">
+              Página {{ currentPage() + 1 }} de {{ totalPages() }}
+            </span>
+            <button
+              (click)="nextPage()"
+              [disabled]="currentPage() >= totalPages() - 1"
+              class="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100">
+              Siguiente
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Modal: Fleet Create/Edit -->
+  @if (activeModal() === 'fleet') {
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold">
+            {{ editingFleet() ? 'Editar Flotilla' : 'Nueva Flotilla' }}
+          </h2>
+          <button (click)="closeModal()" class="text-gray-500 hover:text-gray-700">
+            ❌
+          </button>
+        </div>
+
+        <form [formGroup]="fleetForm" (ngSubmit)="submitFleetForm()" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Nombre de la Empresa *
+              </label>
+              <input
+                type="text"
+                formControlName="name"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="fleetForm.get('name')?.invalid && fleetForm.get('name')?.touched">
+              @if (fleetForm.get('name')?.invalid && fleetForm.get('name')?.touched) {
+                <p class="text-red-500 text-sm mt-1">El nombre es requerido (máx 200 caracteres)</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                NIT *
+              </label>
+              <input
+                type="text"
+                formControlName="tax_id"
+                [readonly]="editingFleet()"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="fleetForm.get('tax_id')?.invalid && fleetForm.get('tax_id')?.touched"
+                [class.bg-gray-100]="editingFleet()">
+              @if (fleetForm.get('tax_id')?.invalid && fleetForm.get('tax_id')?.touched) {
+                <p class="text-red-500 text-sm mt-1">El NIT es requerido (máx 50 caracteres)</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Email Corporativo *
+              </label>
+              <input
+                type="email"
+                formControlName="corporate_email"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="fleetForm.get('corporate_email')?.invalid && fleetForm.get('corporate_email')?.touched">
+              @if (fleetForm.get('corporate_email')?.invalid && fleetForm.get('corporate_email')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Email válido requerido</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Nombre de Contacto
+              </label>
+              <input
+                type="text"
+                formControlName="contact_name"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Teléfono
+              </label>
+              <input
+                type="text"
+                formControlName="phone"
+                placeholder="8-15 dígitos"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="fleetForm.get('phone')?.invalid && fleetForm.get('phone')?.touched">
+              @if (fleetForm.get('phone')?.invalid && fleetForm.get('phone')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Debe contener 8-15 dígitos</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Descuento Corporativo (%) *
+              </label>
+              <input
+                type="number"
+                formControlName="corporate_discount_percentage"
+                min="0"
+                max="10"
+                step="0.01"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="fleetForm.get('corporate_discount_percentage')?.invalid && fleetForm.get('corporate_discount_percentage')?.touched">
+              @if (fleetForm.get('corporate_discount_percentage')?.invalid && fleetForm.get('corporate_discount_percentage')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Debe estar entre 0 y 10</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Límite de Placas *
+              </label>
+              <input
+                type="number"
+                formControlName="plate_limit"
+                min="1"
+                max="50"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                [class.border-red-500]="fleetForm.get('plate_limit')?.invalid && fleetForm.get('plate_limit')?.touched">
+              @if (fleetForm.get('plate_limit')?.invalid && fleetForm.get('plate_limit')?.touched) {
+                <p class="text-red-500 text-sm mt-1">Debe estar entre 1 y 50</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Período de Facturación *
+              </label>
+              <select
+                formControlName="billing_period"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="DAILY">Diario</option>
+                <option value="WEEKLY">Semanal</option>
+                <option value="MONTHLY">Mensual</option>
+                <option value="ANNUAL">Anual</option>
+              </select>
+            </div>
+
+            @if (editingFleet()) {
+              <div class="col-span-2">
+                <label class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    formControlName="is_active"
+                    class="w-4 h-4 text-blue-600 rounded">
+                  <span class="text-sm font-medium text-gray-700">Flotilla Activa</span>
+                </label>
+              </div>
+            }
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              (click)="closeModal()"
+              class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="fleetForm.invalid || submitting()"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              @if (submitting()) {
+                ⏳
+              }
+              {{ submitting() ? 'Guardando...' : editingFleet() ? 'Actualizar' : 'Crear' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Vehicles Management -->
+  @if (activeModal() === 'vehicle' && selectedFleet()) {
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+      <div class="bg-white rounded-lg p-6 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-2xl font-bold">Vehículos de {{ selectedFleet()?.name }}</h2>
+            <p class="text-sm text-gray-600">
+              {{ vehiclesCount() }} / {{ selectedFleet()?.plate_limit }} vehículos activos
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <button 
+              (click)="openAddVehicleForm()"
+              [disabled]="vehiclesCount() >= (selectedFleet()?.plate_limit || 0)"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              ➕
+              <span>Agregar Vehículo</span>
+            </button>
+            <button (click)="closeModal()" class="text-gray-500 hover:text-gray-700">
+              ❌
+            </button>
+          </div>
+        </div>
+
+        @if (showAddVehicleForm()) {
+          <form [formGroup]="vehicleForm" (ngSubmit)="submitVehicleForm()" class="mb-6 p-4 bg-gray-50 rounded-lg border">
+            <h3 class="font-semibold mb-3">Agregar Nuevo Vehículo</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Placa *
+                </label>
+                <input
+                  type="text"
+                  formControlName="license_plate"
+                  placeholder="ABC-123 o P-12345"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 uppercase"
+                  [class.border-red-500]="vehicleForm.get('license_plate')?.invalid && vehicleForm.get('license_plate')?.touched">
+                @if (vehicleForm.get('license_plate')?.invalid && vehicleForm.get('license_plate')?.touched) {
+                  <p class="text-red-500 text-sm mt-1">Formato inválido (ej: ABC-123, P-12345)</p>
+                }
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Empleado Asignado
+                </label>
+                <input
+                  type="text"
+                  formControlName="assigned_employee"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Plan *
+                </label>
+                <select
+                  formControlName="plan_id"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  [class.border-red-500]="vehicleForm.get('plan_id')?.invalid && vehicleForm.get('plan_id')?.touched">
+                  <option value="">Seleccione un plan</option>
+                  <option value="1">Plan A</option>
+                  <option value="2">Plan B</option>
+                  <option value="3">Plan C</option>
+                  <option value="4">Plan D</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Vehículo *
+                </label>
+                <select
+                  formControlName="vehicle_type_id"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  [class.border-red-500]="vehicleForm.get('vehicle_type_id')?.invalid && vehicleForm.get('vehicle_type_id')?.touched">
+                  <option value="">Seleccione tipo</option>
+                  <option value="1">Sedán</option>
+                  <option value="2">Pickup</option>
+                  <option value="3">Motocicleta</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                (click)="cancelAddVehicle()"
+                class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                [disabled]="vehicleForm.invalid || submitting()"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                @if (submitting()) {
+                  ⏳
+                }
+                {{ submitting() ? 'Agregando...' : 'Agregar' }}
+              </button>
+            </div>
+          </form>
+        }
+
+        @if (loadingVehicles()) {
+          <div class="flex justify-center items-center p-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        } @else if (vehicles().length === 0) {
+          <div class="text-center py-12">
+            <div class="text-6xl mb-4">🚗</div>
+            <p class="text-gray-500">No hay vehículos registrados en esta flotilla</p>
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Placa</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Plan</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                @for (vehicle of vehicles(); track vehicle.id) {
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                      {{ vehicle.license_plate }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900">
+                      {{ vehicle.assigned_employee || 'Sin asignar' }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900">
+                      {{ vehicle.plan.name }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900">
+                      {{ vehicle.vehicle_type.type }}
+                    </td>
+                    <td class="px-4 py-3">
+                      <span [class]="vehicle.is_active 
+                        ? 'px-2 py-1 text-xs rounded-full bg-green-100 text-green-800'
+                        : 'px-2 py-1 text-xs rounded-full bg-red-100 text-red-800'">
+                        {{ vehicle.is_active ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <button
+                        (click)="confirmDeleteVehicle(vehicle)"
+                        class="px-2 py-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded"
+                        title="Eliminar vehículo">
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Discount Configuration -->
+  @if (activeModal() === 'discount' && selectedFleet()) {
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold">Configurar Descuentos</h2>
+          <button (click)="closeModal()" class="text-gray-500 hover:text-gray-700">
+            ❌
+          </button>
+        </div>
+
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg">
+          <p class="text-sm text-blue-800">
+            <strong>Flotilla:</strong> {{ selectedFleet()?.name }}
+          </p>
+          <p class="text-sm text-blue-800 mt-1">
+            <strong>Descuento actual:</strong> {{ currentDiscount()?.corporate_discount_percentage }}%
+          </p>
+          <p class="text-sm text-blue-800 mt-1">
+            <strong>Descuento máximo total:</strong> {{ currentDiscount()?.max_total_discount }}%
+          </p>
+        </div>
+
+        <form [formGroup]="discountForm" (ngSubmit)="submitDiscountForm()">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Descuento Corporativo (%) *
+            </label>
+            <input
+              type="number"
+              formControlName="corporate_discount_percentage"
+              min="0"
+              max="10"
+              step="0.01"
+              class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              [class.border-red-500]="discountForm.get('corporate_discount_percentage')?.invalid && discountForm.get('corporate_discount_percentage')?.touched">
+            @if (discountForm.get('corporate_discount_percentage')?.invalid && discountForm.get('corporate_discount_percentage')?.touched) {
+              <p class="text-red-500 text-sm mt-1">Debe estar entre 0 y 10%</p>
+            }
+            <p class="text-xs text-gray-500 mt-1">
+              El descuento corporativo se suma a los descuentos de planes de suscripción
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              (click)="closeModal()"
+              class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="discountForm.invalid || submitting()"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              @if (submitting()) {
+                ⏳
+              }
+              {{ submitting() ? 'Guardando...' : 'Actualizar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Consumption Statistics -->
+  @if (activeModal() === 'consumption' && selectedFleet()) {
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+      <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold">Estadísticas de Consumo - {{ selectedFleet()?.name }}</h2>
+          <button (click)="closeModal()" class="text-gray-500 hover:text-gray-700">
+            ❌
+          </button>
+        </div>
+
+        @if (loadingConsumption()) {
+          <div class="flex justify-center items-center p-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        } @else if (consumption()) {
+          <div class="space-y-6">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-4 gap-4">
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <p class="text-sm text-blue-600 font-medium">Total Vehículos</p>
+                <p class="text-2xl font-bold text-blue-900">{{ consumption()?.total_vehicles }}</p>
+              </div>
+              <div class="bg-green-50 p-4 rounded-lg">
+                <p class="text-sm text-green-600 font-medium">Total Entradas</p>
+                <p class="text-2xl font-bold text-green-900">{{ consumption()?.total_entries }}</p>
+              </div>
+              <div class="bg-purple-50 p-4 rounded-lg">
+                <p class="text-sm text-purple-600 font-medium">Horas Consumidas</p>
+                <p class="text-2xl font-bold text-purple-900">{{ consumption()?.total_hours_consumed }}</p>
+              </div>
+              <div class="bg-orange-50 p-4 rounded-lg">
+                <p class="text-sm text-orange-600 font-medium">Monto Total</p>
+                <p class="text-2xl font-bold text-orange-900">Q{{ consumption()?.total_amount_charged }}</p>
+              </div>
+            </div>
+
+            <!-- Period Info -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-600">
+                <strong>Período:</strong> 
+                {{ formatDate(consumption()?.period_start) }} - {{ formatDate(consumption()?.period_end) }}
+              </p>
+            </div>
+
+            <!-- Vehicle Details -->
+            @if (consumption()?.vehicle_consumption && consumption()!.vehicle_consumption.length > 0) {
+              <div>
+                <h3 class="font-semibold mb-3">Consumo por Vehículo</h3>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Placa</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entradas</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Horas</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                      @for (detail of consumption()?.vehicle_consumption; track detail.license_plate) {
+                        <tr class="hover:bg-gray-50">
+                          <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                            {{ detail.license_plate }}
+                          </td>
+                          <td class="px-4 py-3 text-sm text-gray-900">
+                            {{ detail.assigned_employee || 'Sin asignar' }}
+                          </td>
+                          <td class="px-4 py-3 text-sm text-gray-900">
+                            {{ detail.entries_count }}
+                          </td>
+                          <td class="px-4 py-3 text-sm text-gray-900">
+                            {{ detail.hours_consumed }}
+                          </td>
+                          <td class="px-4 py-3 text-sm font-semibold text-gray-900">
+                            Q{{ detail.amount_charged }}
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            } @else {
+              <div class="text-center py-8 text-gray-500">
+                No hay datos de consumo en este período
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Delete Fleet Confirmation -->
+  @if (activeModal() === 'delete-fleet' && fleetToDelete()) {
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
+        <div class="flex items-start gap-4 mb-4">
+          <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            ⚠️
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">¿Eliminar Flotilla?</h3>
+            <p class="text-sm text-gray-600">
+              ¿Está seguro de eliminar la flotilla <strong>"{{ fleetToDelete()?.name }}"</strong>?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="deleteFleet()"
+            [disabled]="submitting()"
+            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+            @if (submitting()) {
+              ⏳
+            }
+            {{ submitting() ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Delete Vehicle Confirmation -->
+  @if (activeModal() === 'delete-vehicle' && vehicleToDelete()) {
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" (click)="closeModal()">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" (click)="$event.stopPropagation()">
+        <div class="flex items-start gap-4 mb-4">
+          <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            ⚠️
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">¿Eliminar Vehículo?</h3>
+            <p class="text-sm text-gray-600">
+              ¿Está seguro de eliminar el vehículo con placa <strong>"{{ vehicleToDelete()?.license_plate }}"</strong>?
+              Esta acción no se puede deshacer.
+            </p>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3">
+          <button
+            type="button"
+            (click)="closeModal()"
+            class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            (click)="deleteVehicle()"
+            [disabled]="submitting()"
+            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+            @if (submitting()) {
+              ⏳
+            }
+            {{ submitting() ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

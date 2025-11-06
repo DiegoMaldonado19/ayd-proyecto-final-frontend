@@ -59,22 +59,24 @@ export interface TicketChargeResponse {
 
 /**
  * Request para aplicar beneficio de comercio
+ * Backend: ApplyBenefitRequest.java
  */
 export interface ApplyBenefitRequest {
-  commerceId: number;
-  hoursToGrant: number;
+  businessId: number;
+  grantedHours: number;
 }
 
 /**
  * Response de beneficio aplicado
+ * Backend: BusinessFreeHoursResponse.java
  */
 export interface BusinessFreeHoursResponse {
   id: number;
   ticketId: number;
-  commerceId: number;
-  commerceName: string;
-  freeHoursGranted: number;
-  createdAt: string;
+  businessId: number;
+  businessName: string;
+  grantedHours: number;
+  grantedAt: string;
 }
 
 // ============================================================================

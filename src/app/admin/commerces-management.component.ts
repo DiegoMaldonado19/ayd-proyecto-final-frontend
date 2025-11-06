@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AdminService, CommerceResponse, CreateCommerceRequest, UpdateCommerceRequest, ConfigureBenefitRequest, BenefitResponse } from './services/admin.service';
+import { AdminService, CommerceResponse, CreateCommerceRequest, UpdateCommerceRequest, ConfigureBenefitRequest, UpdateBenefitRequest, BenefitResponse } from './services/admin.service';
 import { NotificationService } from '../shared/services/notification.service';
 
 /**
@@ -267,7 +267,7 @@ import { NotificationService } from '../shared/services/notification.service';
                     @for (branch of branches(); track branch.id) {
                       @if (branch.benefit) {
                         <div class="bg-white rounded border border-blue-200 p-3">
-                          <div class="flex justify-between items-start">
+                          <div class="flex justify-between items-start gap-3">
                             <div class="flex-1">
                               <div class="font-medium text-gray-900">{{ branch.name }}</div>
                               <div class="text-sm text-gray-600 mt-1">
@@ -279,15 +279,33 @@ import { NotificationService } from '../shared/services/notification.service';
                                 </span>
                               </div>
                             </div>
-                            @if (branch.benefit.is_active) {
-                              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                ✓ Activo
-                              </span>
-                            } @else {
-                              <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                Inactivo
-                              </span>
-                            }
+                            <div class="flex items-center gap-2">
+                              @if (branch.benefit.is_active) {
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✓ Activo
+                                </span>
+                              } @else {
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  Inactivo
+                                </span>
+                              }
+                              <button
+                                type="button"
+                                (click)="openEditBenefitModal(branch.benefit)"
+                                class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Editar beneficio"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                type="button"
+                                (click)="openDeleteBenefitModal(branch.benefit)"
+                                class="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Eliminar beneficio"
+                              >
+                                🗑️
+                              </button>
+                            </div>
                           </div>
                         </div>
                       }
@@ -328,12 +346,12 @@ import { NotificationService } from '../shared/services/notification.service';
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Seleccionar tipo</option>
-                    <option value="DIRECT_DISCOUNT">Descuento Directo</option>
-                    <option value="NO_CONSUME_HOURS">No Descontar Horas</option>
+                    <option value="NO_CONSUME_HOURS">No Descontar Horas (Suscriptores)</option>
+                    <option value="DIRECT_DISCOUNT">Descuento Directo (No Suscriptores)</option>
                   </select>
                   <p class="text-xs text-gray-500 mt-1">
-                    Descuento Directo: Reduce tiempo facturable a clientes sin suscripción<br>
-                    No Descontar Horas: No consume bolsón de clientes con suscripción
+                    No Descontar Horas: No consume del bolsón de clientes con suscripción<br>
+                    Descuento Directo: Reduce tiempo facturable a clientes sin suscripción
                   </p>
                 </div>
 
@@ -353,6 +371,9 @@ import { NotificationService } from '../shared/services/notification.service';
                     <option value="MONTHLY">Mensual</option>
                     <option value="ANNUAL">Anual</option>
                   </select>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Diario: Liquidar cada día | Semanal: Cada semana | Mensual: Cada mes | Anual: Una vez al año
+                  </p>
                 </div>
 
                 @if (errorMessage()) {
@@ -427,6 +448,136 @@ import { NotificationService } from '../shared/services/notification.service';
           </div>
         </div>
       }
+
+      <!-- Edit Benefit Modal -->
+      @if (showEditBenefitModal()) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Editar Beneficio
+              </h3>
+
+              <p class="text-sm text-gray-600 mb-4">
+                Sucursal: <span class="font-semibold">{{ selectedBenefit()?.branch_name }}</span>
+              </p>
+
+              <form (submit)="updateBenefit(); $event.preventDefault()">
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Beneficio *
+                    </label>
+                    <select
+                      [(ngModel)]="benefitForm.benefit_type"
+                      name="benefit_type"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Seleccionar tipo</option>
+                      <option value="NO_CONSUME_HOURS">No Descontar Horas (Suscriptores)</option>
+                      <option value="DIRECT_DISCOUNT">Descuento Directo (No Suscriptores)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                      Período de Liquidación *
+                    </label>
+                    <select
+                      [(ngModel)]="benefitForm.settlement_period"
+                      name="settlement_period"
+                      required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Seleccionar período</option>
+                      <option value="DAILY">Diario</option>
+                      <option value="WEEKLY">Semanal</option>
+                      <option value="MONTHLY">Mensual</option>
+                      <option value="ANNUAL">Anual</option>
+                    </select>
+                  </div>
+
+                  @if (errorMessage()) {
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p class="text-sm text-red-800">{{ errorMessage() }}</p>
+                    </div>
+                  }
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    (click)="closeEditBenefitModal()"
+                    class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    [disabled]="!isEditBenefitFormValid() || isSaving()"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ isSaving() ? 'Actualizando...' : 'Actualizar' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Delete Benefit Confirmation Modal -->
+      @if (showDeleteBenefitModal()) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold text-red-600 mb-4">
+                Eliminar Beneficio
+              </h3>
+
+              <p class="text-gray-700 mb-4">
+                ¿Estás seguro de eliminar el beneficio de la sucursal 
+                <strong>{{ selectedBenefit()?.branch_name }}</strong>?
+              </p>
+
+              <div class="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p class="text-sm text-gray-700">
+                  <strong>Tipo:</strong> {{ selectedBenefit()?.benefit_type_name }}<br>
+                  <strong>Período:</strong> {{ selectedBenefit()?.settlement_period_name }}
+                </p>
+              </div>
+
+              <p class="text-sm text-red-600 mb-6">
+                ⚠️ Esta acción no se puede deshacer.
+              </p>
+
+              @if (errorMessage()) {
+                <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p class="text-sm text-red-800">{{ errorMessage() }}</p>
+                </div>
+              }
+
+              <div class="flex justify-end gap-3">
+                <button
+                  type="button"
+                  (click)="closeDeleteBenefitModal()"
+                  class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  (click)="confirmDeleteBenefit()"
+                  [disabled]="isSaving()"
+                  class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ isSaving() ? 'Eliminando...' : 'Eliminar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -449,6 +600,11 @@ export class CommercesManagementComponent implements OnInit {
   showEditModal = signal(false);
   showBenefitsModal = signal(false);
   showDeleteModal = signal(false);
+  showEditBenefitModal = signal(false);
+  showDeleteBenefitModal = signal(false);
+
+  // Beneficio seleccionado para editar/eliminar
+  selectedBenefit = signal<BenefitResponse | null>(null);
 
   // Formularios
   commerceForm: any = {
@@ -613,6 +769,11 @@ export class CommercesManagementComponent implements OnInit {
     return form.branch_id && form.benefit_type && form.settlement_period;
   }
 
+  isEditBenefitFormValid(): boolean {
+    const form = this.benefitForm;
+    return form.benefit_type && form.settlement_period;
+  }
+
   async saveCommerce() {
     if (!this.isFormValid()) {
       this.notificationService.warning('Complete todos los campos requeridos');
@@ -713,4 +874,100 @@ export class CommercesManagementComponent implements OnInit {
     };
     this.errorMessage.set('');
   }
+
+  openEditBenefitModal(benefit: BenefitResponse) {
+    this.selectedBenefit.set(benefit);
+    this.benefitForm = {
+      branch_id: benefit.branch_id.toString(),
+      benefit_type: benefit.benefit_type_code,
+      settlement_period: benefit.settlement_period_code
+    };
+    this.showEditBenefitModal.set(true);
+  }
+
+  closeEditBenefitModal() {
+    this.showEditBenefitModal.set(false);
+    this.selectedBenefit.set(null);
+    this.benefitForm = {
+      branch_id: '',
+      benefit_type: '',
+      settlement_period: ''
+    };
+    this.errorMessage.set('');
+  }
+
+  async updateBenefit() {
+    if (!this.isEditBenefitFormValid() || !this.selectedCommerce() || !this.selectedBenefit()) {
+      this.notificationService.warning('Complete todos los campos');
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+
+    try {
+      await this.adminService.updateBenefit(
+        this.selectedCommerce()!.id,
+        this.selectedBenefit()!.id,
+        {
+          benefit_type: this.benefitForm.benefit_type,
+          settlement_period: this.benefitForm.settlement_period
+        }
+      );
+
+      this.notificationService.success('Beneficio actualizado exitosamente');
+      this.closeEditBenefitModal();
+      
+      // Recargar beneficios del comercio
+      if (this.selectedCommerce()) {
+        await this.loadCommerceBenefits(this.selectedCommerce()!.id);
+      }
+    } catch (error: any) {
+      this.errorMessage.set(
+        error.error?.message || 'Error al actualizar beneficio'
+      );
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  openDeleteBenefitModal(benefit: BenefitResponse) {
+    this.selectedBenefit.set(benefit);
+    this.showDeleteBenefitModal.set(true);
+  }
+
+  closeDeleteBenefitModal() {
+    this.showDeleteBenefitModal.set(false);
+    this.selectedBenefit.set(null);
+    this.errorMessage.set('');
+  }
+
+  async confirmDeleteBenefit() {
+    if (!this.selectedCommerce() || !this.selectedBenefit()) return;
+
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+
+    try {
+      await this.adminService.deleteBenefit(
+        this.selectedCommerce()!.id,
+        this.selectedBenefit()!.id
+      );
+
+      this.notificationService.success('Beneficio eliminado exitosamente');
+      this.closeDeleteBenefitModal();
+      
+      // Recargar beneficios del comercio
+      if (this.selectedCommerce()) {
+        await this.loadCommerceBenefits(this.selectedCommerce()!.id);
+      }
+    } catch (error: any) {
+      this.errorMessage.set(
+        error.error?.message || 'Error al eliminar beneficio'
+      );
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
 }
+

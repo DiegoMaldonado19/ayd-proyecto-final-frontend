@@ -19,7 +19,8 @@ import { TopNavComponent } from '../partials/navigation/topnav.component';
               { label: '🏪 Comercios', link: '/admin/commerces' },
               { label: '💳 Suscripción', link: '/admin/plans' },
               { label: '💰 Tarifas', link: '/admin/rates' },
-              { label: '🔍 Bitácora', link: '/admin/discount-audit' }
+              { label: '🚗 Flotillas', link: '/admin/fleets' },
+              { label: '📝 Bitácora', link: '/admin/discount-audit' }
             ]"
           ></app-topnav>
         </div>
