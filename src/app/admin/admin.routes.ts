@@ -12,22 +12,31 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'users',
-    loadComponent: () => import('./users-management.component').then((m) => m.UsersManagementComponent),
+    loadComponent: () =>
+      import('./users-management.component').then((m) => m.UsersManagementComponent),
   },
   {
     path: 'commerces',
-    loadComponent: () => import('./commerces-management.component').then((m) => m.CommercesManagementComponent),
+    loadComponent: () =>
+      import('./commerces-management.component').then((m) => m.CommercesManagementComponent),
   },
   {
     path: 'plans',
-    loadComponent: () => import('./subscription-plans.component').then((m) => m.SubscriptionPlansComponent),
+    loadComponent: () =>
+      import('./subscription-plans.component').then((m) => m.SubscriptionPlansComponent),
   },
   {
     path: 'rates',
-    loadComponent: () => import('./rates-management.component').then((m) => m.RatesManagementComponent),
+    loadComponent: () =>
+      import('./rates-management.component').then((m) => m.RatesManagementComponent),
   },
   {
     path: 'fleets',
-    loadComponent: () => import('./fleets-management.component').then((m) => m.FleetsManagementComponent),
+    loadComponent: () =>
+      import('./fleets-management.component').then((m) => m.FleetsManagementComponent),
+  },
+  {
+    path: 'audit-logs',
+    loadComponent: () => import('./discount-audit.component').then((m) => m.DiscountAuditComponent),
   },
 ];
